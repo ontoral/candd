@@ -10,7 +10,7 @@ import wx.gizmos as gizmos
 import pricer
 
 class Blocker(object):
-    """Context handler for blocking messages from the controller.
+    """Context handler for blocking events from programmatic changes.
 
     usage:
         blocking = Blocker()        # blocking is False by default
