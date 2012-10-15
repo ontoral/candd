@@ -44,18 +44,19 @@ def get_quote(symbol, month=None, day=None, year=None):
     parser = PriceParser()
     parser.feed(content)
     price_date = date.strftime(DATE_FORMAT)
-    print '{price_date} price for {symbol} is {parser.price}'.format(**locals())
+    print '{price_date} price for {symbol:8} = {parser.price:8.02f}'.format(**locals())
 
     return parser.price
 
-def get_quotes(month=None, day=None, year=None, infile='symbols.txt', outfile=None):
+def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
+               download_dir=None):
     date = get_date(month, day, year)
     date_str = date.strftime(PC_FORMAT)
     quotes = []
 
-    if not os.path.exists(infile):
+    if not os.path.exists(symbol_file):
         return
-    with file(infile, 'r') as symbols:
+    with file(symbol_file, 'r') as symbols:
         for symbol in symbols:
             symbol = symbol.strip()
             if not symbol or symbol.startswith('#'):
@@ -65,7 +66,9 @@ def get_quotes(month=None, day=None, year=None, infile='symbols.txt', outfile=No
                 entry = '{symbol:9}{price:>64.02f}{date_str}'.format(**locals())
                 quotes.append(entry)
 
-    if outfile:
+    if download_dir:
+        filename = 'fi{date_str}.pri'.format(**locals())
+        outfile = os.path.join(download_dir, filename)
         print 'File: '+outfile
         with file(outfile, 'w') as out:
             out.write('\n'.join(quotes))
@@ -75,7 +78,7 @@ if __name__ == '__main__':
 ##    with file('log.txt', 'w') as logfile:
 ##        logfile.write(str(sys.argv))
 
-    infile = os.path.join('..', 'symbols.txt')
+    symbol_file = os.path.join('..', 'symbols.txt')
 
     if len(sys.argv) == 2:
         if sys.argv[1] == 'daily':
@@ -86,13 +89,12 @@ if __name__ == '__main__':
         day = int(raw_input('   Day (1-31): '))
         year = int(raw_input('   Year (ex. 2012): '))
         dt = datetime.date(year, month, day)
-        symbols = raw_input('   Symbol file ({0}): '.format(infile))
+        symbols = raw_input('   Symbol file ({symbol_file}): '.format(**locals()))
         if len(symbols):
-            infile = symbols
+            symbol_file = symbols
 
-    filename = 'fi{0}.pri'.format(dt.strftime(PC_FORMAT))
-    outfile = os.path.join('..', 'supplemental-prices', filename)
-    get_quotes(dt.month, dt.day, dt.year, infile, outfile=outfile)
+    download_dir = os.path.join('..', 'supplemental-prices')
+    get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
 
     # get_quote('goog')
     # get_quote('aapl')

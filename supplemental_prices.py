@@ -1,4 +1,5 @@
 import os
+import sys
 import datetime
 
 import wx
@@ -88,7 +89,7 @@ class MainFrame(wx.Frame):
 
     def __init__(self, parent=None):
         wx.Frame.__init__(self, parent=parent, size=(800, 600))
-        self._init_ctrls(parent)
+        self._init_ctrls(self)
 
         self._blocking = Blocker()
         self._clean = True
@@ -114,7 +115,7 @@ class MainFrame(wx.Frame):
             self.SetSymbolFile(symbol_file)
 
         # Update the calendar
-        self.Calendar.SetFocus()
+        self.Download.SetFocus()
         self.OnCalendarChange(None)
 
     def OnCalendarChange(self, event):
@@ -145,11 +146,8 @@ class MainFrame(wx.Frame):
                 symbols.write('\n'.join(self.ListBox.GetStrings()))
             self._clean = True
  
-        outdate = datetime.date(self.year, self.month, self.day)
-        filename = 'fi{0}.pri'.format(outdate.strftime('%m%d%y'))
-        outfile = os.path.join(self.download_dir, filename)
         pricer.get_quotes(self.month, self.day, self.year,
-                          infile=self.symbol_file, outfile=outfile)
+                          self.symbol_file, self.download_dir)
 
         with file('settings.ini', 'w') as settings:
             settings.write(self.symbol_file+'\n')
@@ -200,13 +198,20 @@ class MainFrame(wx.Frame):
             self.FBB.SetValue(self.symbol_file)
 
 
-class SupplementalPricesApp(wx.PySimpleApp):
+class SupplementalPricesApp(wx.App):
     def __init__(self):
-        wx.PySimpleApp.__init__(self)
+        wx.App.__init__(self)
         main_frame = MainFrame()
         main_frame.Show()
 
 
 if __name__ == '__main__':
-    app = SupplementalPricesApp()
-    app.MainLoop()
+    if len(sys.argv) == 2:
+        if sys.argv[1] == 'daily':
+            dt = datetime.date.today()
+            symbol_file = os.path.join('..', 'symbols.txt')
+            download_dir = os.path.join('..', 'supplemental-prices')
+            pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
+    else:
+        app = SupplementalPricesApp()
+        app.MainLoop()
