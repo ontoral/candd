@@ -61,8 +61,9 @@ def get_quotes(month=None, day=None, year=None, infile='symbols.txt', outfile=No
             if not symbol or symbol.startswith('#'):
                 continue
             price = get_quote(symbol, date.month, date.day, date.year)
-            entry = '{symbol:9}{price:>64.02f}{date_str}'.format(**locals())
-            quotes.append(entry)
+            if price >= 0:
+                entry = '{symbol:9}{price:>64.02f}{date_str}'.format(**locals())
+                quotes.append(entry)
 
     if outfile:
         print 'File: '+outfile
