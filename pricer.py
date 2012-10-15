@@ -49,7 +49,7 @@ def get_quote(symbol, month=None, day=None, year=None):
     return parser.price
 
 def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
-               download_dir=None):
+               download_dir=None, filename=None):
     date = get_date(month, day, year)
     date_str = date.strftime(PC_FORMAT)
     quotes = []
@@ -67,7 +67,7 @@ def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
                 quotes.append(entry)
 
     if download_dir:
-        filename = 'fi{date_str}.pri'.format(**locals())
+        filename = filename or 'fi{date_str}.pri'.format(**locals())
         outfile = os.path.join(download_dir, filename)
         print 'File: '+outfile
         with file(outfile, 'w') as out:
