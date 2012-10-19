@@ -1,0 +1,6 @@
+COMP
+
+DJIA
+
+SPX
+TNX
