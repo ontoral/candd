@@ -1,6 +1,11 @@
 Post Files
-----------
+==========
 
+0. Download TIAA-CREF files from the previous day
+ a. Login to http://tiaa-cref.org
+ b. Click "Client Data Download"
+ c. Click "Download Current File"
+ d. Expand files to "C:\portfolio
 1. Open and review Securities
  * Clean up names:
   - Remove rates/dates from title
@@ -38,7 +43,7 @@ Post Files
 14. Resolve Quantity Difference issues
 
 Clean Up Data
--------------
+=============
 
 1. Look in Securities
 2. Look in Transaction Writer
