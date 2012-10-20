@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import sys
 import datetime
@@ -37,7 +39,7 @@ def get_fidelity_path_from_tiaa_cref(tc_path):
 
     # Get output filename
     path = os.path.dirname(tc_path)
-    ext = base[-3:].lower()
+    ext = filename[-3:].lower()
     pc_datestr = date.strftime(PC_DATE_FORMAT)
     
     return os.path.join(path, 'fi{pc_datestr}.{ext}'.format(**locals()))
@@ -83,7 +85,8 @@ if __name__ == '__main__':
     usage = '''usage:
     {0} --help
     {0} [-c custodian][-t filetype[,filetype...]] [PATH]'''.format(*sys.argv)
-    if len(sys.argv) == 2:
+
+    if len(sys.argv) == 1:
         path = os.path.realpath('.')
     else:
         path = os.path.realpath(sys.argv[-1])
@@ -101,7 +104,7 @@ if __name__ == '__main__':
         custodian = 'TC'
 
     if '-t' in sys.argv:
-        filetypes = [ext.lower() for ext in split(sys.argv[sys.argv.index('-t') + 1], ',')]
+        filetypes = [ext.lower() for ext in sys.argv[sys.argv.index('-t') + 1].split(',')]
     else:
         filetypes = FILE_TYPES
 
