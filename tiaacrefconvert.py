@@ -27,7 +27,7 @@ def convert_file(infile, converter):
 def convert_sec(infile):
     def sec(values, **kwargs):
         symbol = values[0]
-        sec_type = 'MF' if values[1] == 'OT' else 'MF'
+        sec_type = 'MF' # if values[1] == 'OT' else 'MF'
         desc = values[2][0:40]
         cusip = values[21]
         return '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00\n'.format(**locals())
