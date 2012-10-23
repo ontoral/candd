@@ -1,19 +1,25 @@
+Daily Checklist
+===============
+
 Post Files
-==========
+----------
 
 1. Download TIAA-CREF files from the previous day
- a. Login to http://tiaa-cref.org
- b. Click "Client Data Download"
- c. Click "Download Current File"
- d. Expand files to "C:\portfoliocenter-data\tiaa-cref-exports\"
- e. Move current .zip file to "C:\portfolio-center-data\tiaa-cref-exports\archives\"
- f. Run TIAA-CREF converter program
+ 1. Login to http://tiaa-cref.org
+ 2. Click "Client Data Download"
+ 3. Click "Download Current File"
+ 4. Expand files to "C:\portfoliocenter-data\tiaa-cref-exports\"
+ 5. Move current .zip file to "C:\portfolio-center-data\tiaa-cref-exports\archives\"
+ 6. Run Fidelity converter program (fidoconvert.py)
 2. Open and review Securities
  * Clean up names:
-  - Remove rates/dates from title
+  - If interest rate is > 0% simplify it
+   + 0.4500000%  ->  0.45%
+   + 5.014243%  ->  5+%
+  - Remove date from title
   - Move any geographical location to comment
   - Expand common abbreviations
-  - Lookup CUSIP for further info (http://fixedincome.fidelity.com, etc.)
+ * Lookup CUSIP for further info (http://fixedincome.fidelity.com, etc.)
 3. Save any changes
 4. Post Securities
 5. Open and review Prices
@@ -45,7 +51,7 @@ Post Files
 15. Resolve Quantity Difference issues
 
 Clean Up Data
-=============
+-------------
 
 1. Look in Securities
 2. Look in Transaction Writer
