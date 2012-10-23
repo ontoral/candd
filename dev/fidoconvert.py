@@ -78,18 +78,12 @@ def convert_tiaa_cref_pri_file(infile):
         return '{symbol:58}{price:>15.07f}{pc_datestr}\n'.format(**locals())
     return convert_csv(infile, outfile, pri)
 
-conversions = {
-    'TC': {
-        'pri': ('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
-        'sec': ('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
-    }
-}
-
 if __name__ == '__main__':
     usage = '''usage:
     {0} --help
     {0} [-c custodian][-t filetype[,filetype...]] [PATH]'''.format(*sys.argv)
 
+    # Parse command line
     if len(sys.argv) == 1:
         path = os.path.realpath('.')
     else:
@@ -111,6 +105,14 @@ if __name__ == '__main__':
         filetypes = [ext.lower() for ext in sys.argv[sys.argv.index('-t') + 1].split(',')]
     else:
         filetypes = FILE_TYPES
+
+    # Execute the conversions
+    conversions = {
+        'TC': {
+            'pri': ('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
+            'sec': ('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
+        }
+    }
 
     for filetype in filetypes:
         if filetype not in conversions[custodian]:
