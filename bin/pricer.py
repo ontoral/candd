@@ -80,8 +80,10 @@ if __name__ == '__main__':
 ##    with file('log.txt', 'w') as logfile:
 ##        logfile.write(str(sys.argv))
 
-    symbol_file = os.path.join('..', 'symbols.txt')
-    download_dir = os.path.join('..', 'supplemental-prices')
+    symbol_file = os.environ.get('SYMBOL_FILE',
+                                 os.path.join('..', 'symbols.txt'))
+    download_dir = os.environ.get('PRICE_DD',
+                                  os.path.join('..', 'supplemental-prices'))
 
     if len(sys.argv) == 2:
         if sys.argv[1] == 'daily':
