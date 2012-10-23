@@ -1,5 +1,6 @@
 settings.ini
 password.txt
+_PROJECT.DAT
 *.py[co]
 *.pri
 
