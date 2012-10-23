@@ -12,25 +12,27 @@ def convert_csv(infile, outfile, converter=None):
     '''General purpose .CSV file conversion engine.'''
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
-    with file(infile, 'r') as src, file(outfile, 'w') as dst:
-        for line in src:
-            values = line.split(',')
-            conv = converter(**locals()) if converter else src
-            dst.write(conv)
+    with file(infile, 'r') as src:
+        with file(outfile, 'w') as dst:
+            for line in src:
+                values = line.split(',')
+                conv = converter(**locals()) if converter else src
+                dst.write(conv)
     return True
 
 def convert_fixed(infile, outfile, fields, converter=None):
     '''General purpose fixed-width file conversion engine.'''
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
-    with file(infile, 'r') as src, file(outfile, 'w') as dst:
-        for line in src:
-            values = []
-            for field in fields:
-                values.append(line[:field])
-                line = line[field:]
-            conv = converter(**locals()) if converter else src
-            dst.write(conv)
+    with file(infile, 'r') as src:
+        with file(outfile, 'w') as dst:
+            for line in src:
+                values = []
+                for field in fields:
+                    values.append(line[:field])
+                    line = line[field:]
+                conv = converter(**locals()) if converter else src
+                dst.write(conv)
     return True
 
 def get_fidelity_path_from_tiaa_cref(tc_path):
