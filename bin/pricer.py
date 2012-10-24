@@ -80,25 +80,26 @@ if __name__ == '__main__':
 ##    with file('log.txt', 'w') as logfile:
 ##        logfile.write(str(sys.argv))
 
-    symbol_file = os.path.join('..', 'symbols.txt')
+    symbol_file = os.environ.get('SYMBOL_FILE',
+                                 os.path.join('..', 'symbols.txt'))
+    download_dir = os.environ.get('PRICE_DD',
+                                  os.path.join('..', 'supplemental-prices'))
 
     if len(sys.argv) == 2:
         if sys.argv[1] == 'daily':
             dt = datetime.date.today()
     else:
         print 'Downloading historical prices:'
+        # Get date
         month = int(raw_input('   Month (1-12): '))
         day = int(raw_input('   Day (1-31): '))
         year = int(raw_input('   Year (ex. 2012): '))
         dt = datetime.date(year, month, day)
+
+        # Locate symbol file and download directory
         symbols = raw_input('   Symbol file ({symbol_file}): '.format(**locals()))
-        if len(symbols):
-            symbol_file = symbols
+        downloads = raw_input('   Download directory ({download_dir}): '.format(**locals()))
+        symbol_file = symbols if len(symbols) else symbol_file
+        download_dir = downloads if len(downloads) else download_dir
 
-    download_dir = os.path.join('..', 'supplemental-prices')
     get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
-
-    # get_quote('goog')
-    # get_quote('aapl')
-    # get_quote('brkb')
-    # get_quote('trrjx')
