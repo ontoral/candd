@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     # Parse command line
     if len(sys.argv) == 1:
-        path = os.path.realpath('.')
+        path = os.environ.get('TIAA_CREF_DD', os.path.realpath('.'))
     else:
         path = os.path.realpath(sys.argv[-1])
 
