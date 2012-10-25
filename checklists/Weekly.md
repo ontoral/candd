@@ -23,7 +23,7 @@ Friday
 ------
 1. Daily Checklist
 2. Clean up Interface File Listings
- * Tools->Delete Date Range... (make sure Archive Files is selected)
+ * Tools->Delete Date Range... (make sure "Archive Files" is selected)
   * Security (Posted and None)
   * Price (Posted)
   * Portfolio (Update and Partial)

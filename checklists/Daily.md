@@ -5,12 +5,12 @@ Post Files
 ----------
 
 1. Download TIAA-CREF files from the previous day
- 1. Login to http://tiaa-cref.org
- 2. Click "Client Data Download"
- 3. Click "Download Current File"
- 4. Expand files to "C:\portfoliocenter-data\tiaa-cref-exports\"
- 5. Move current .zip file to "C:\portfolio-center-data\tiaa-cref-exports\archives\"
- 6. Run Fidelity converter program (fidoconvert.py)
+   1. Login to http://tiaa-cref.org
+   2. Click "Client Data Download"
+   3. Click "Download Current File"
+   4. Expand files to "C:\portfoliocenter-data\tiaa-cref-exports\"
+   5. Move current .zip file to "C:\portfolio-center-data\tiaa-cref-exports\archives\"
+   6. Run Fidelity converter program (fidoconvert.py)
 2. Open and review Securities
  * Clean up names:
   - If interest rate is > 0% simplify it
