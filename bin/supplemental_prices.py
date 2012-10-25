@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import os
 import sys
 import datetime
@@ -58,7 +59,7 @@ class MainFrame(wx.Frame):
         bsizer.Add(self.IncMonth, 0, wx.ALL, 2)
         bsizer.Add(self.IncYear, 0, wx.ALL, 2)
 
-        self.Calendar = Calendar(self, size=(200, 200))
+        self.Calendar = Calendar(self, -1, size=(200, 300))
         self.Calendar.Bind(wx.lib.calendar.EVT_CALENDAR, self.OnCalendarChange)
         self.Calendar.SetCurrentDay()
         self.Calendar.grid_color = 'BLUE'
@@ -71,7 +72,10 @@ class MainFrame(wx.Frame):
         self.DBB.SetLabel('Prices Folder:')
 
         self.ListBox = gizmos.EditableListBox(self, -1,
-              style=gizmos.EL_DEFAULT_STYLE | gizmos.EL_NO_REORDER)
+#              style=gizmos.EL_DEFAULT_STYLE | gizmos.EL_NO_REORDER
+               )
+        self.ListBox.GetUpButton().Show(False)
+        self.ListBox.GetDownButton().Show(False)
         self.ListBox.Bind(wx.EVT_LIST_DELETE_ITEM, self.OnSymbolListChange)
         self.ListBox.Bind(wx.EVT_LIST_INSERT_ITEM, self.OnSymbolListChange)
 
