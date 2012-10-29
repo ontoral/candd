@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import os
-import sys
 import datetime
 import glob
+import argparse
 
 PC_DATE_FORMAT = '%m%d%y'
-FILE_TYPES = ['sec', 'pri']
+
 
 def convert_csv(infile, outfile, converter=None):
     '''General purpose .CSV file conversion engine.'''
@@ -19,6 +19,7 @@ def convert_csv(infile, outfile, converter=None):
                 conv = converter(**locals()) if converter else src
                 dst.write(conv)
     return True
+
 
 def convert_fixed(infile, outfile, fields, converter=None):
     '''General purpose fixed-width file conversion engine.'''
@@ -35,6 +36,7 @@ def convert_fixed(infile, outfile, fields, converter=None):
                 dst.write(conv)
     return True
 
+
 def get_fidelity_path_from_tiaa_cref(tc_path):
     '''Generates a Fidelity export file path from a TIAA-CREF file path.'''
     # Get date
@@ -45,8 +47,8 @@ def get_fidelity_path_from_tiaa_cref(tc_path):
     path = os.path.dirname(tc_path)
     ext = filename[-3:].lower()
     pc_datestr = date.strftime(PC_DATE_FORMAT)
-    
     return os.path.join(path, 'fi{pc_datestr}.{ext}'.format(**locals()))
+
 
 def get_date_from_tiaa_cref(tc_file):
     '''Parse export file date from TIAA-CREF filename.'''
@@ -54,59 +56,39 @@ def get_date_from_tiaa_cref(tc_file):
     yr = int(tc_file[2:4]) + 2000
     mo = int(tc_file[4:6])
     dy = int(tc_file[6:8])
-    
+
     return datetime.date(yr, mo, dy)
+
 
 def convert_tiaa_cref_sec_file(infile):
     '''Convert Securities export file from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
+
     def sec(values, **kwargs):
         symbol = values[0]
-        sec_type = 'MF' # if values[1] == 'OT' else 'MF'
+        sec_type = 'MF'
         desc = values[2][0:40]
         cusip = values[21]
         return '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00\n'.format(**locals())
+
     return convert_csv(infile, outfile, sec)
+
 
 def convert_tiaa_cref_pri_file(infile):
     '''Convert Prices export file from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
+
     def pri(values, outfile, **kwargs):
         symbol = values[0]
         price = float(values[3])
         pc_datestr = os.path.basename(outfile)[2:8]
         return '{symbol:58}{price:>15.07f}{pc_datestr}\n'.format(**locals())
+
     return convert_csv(infile, outfile, pri)
 
-if __name__ == '__main__':
-    usage = '''usage:
-    {0} --help
-    {0} [-c custodian][-t filetype[,filetype...]] [PATH]'''.format(*sys.argv)
 
-    # Parse command line
-    if len(sys.argv) == 1:
-        path = os.environ.get('TIAA_CREF_DD', os.path.realpath('.'))
-    else:
-        path = os.path.realpath(sys.argv[-1])
-
-    if '--help' in sys.argv:
-        print usage
-        sys.exit(0)
-
-    if '-c' in sys.argv:
-        custodian = sys.argv[sys.argv.index('-c') + 1].upper()
-        if not custodian in conversions:
-            print 'Invalid custodian'
-            sys.exit(1)
-    else:
-        custodian = 'TC'
-
-    if '-t' in sys.argv:
-        filetypes = [ext.lower() for ext in sys.argv[sys.argv.index('-t') + 1].split(',')]
-    else:
-        filetypes = FILE_TYPES
-
-    # Execute the conversions
+def main():
+    # The conversions, as available, by custodian
     conversions = {
         'TC': {
             'pri': ('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
@@ -114,12 +96,26 @@ if __name__ == '__main__':
         }
     }
 
-    for filetype in filetypes:
-        if filetype not in conversions[custodian]:
-            print 'Invalid file type', filetype
-            continue
-        conversion = conversions[custodian][filetype]
-        filenames = glob.glob(os.path.join(path, conversion[0]))
+    '''convert downloaded data files to Fidelity format'''
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('path', nargs='?',
+                        help='folder where data files are stored and converted',
+                        default=os.environ.get('TIAA_CREF_DD', os.getcwd()))
+    parser.add_argument('-c', '--custodian', choices=['TC'], default='TC',
+                        help='abbreviation for data file(s) provider')
+    parser.add_argument('-f', '--filetype', choices=['sec', 'pri'],
+                        action='append',
+                        help='the extension of a filetype to convert')
+    args = parser.parse_args()
+    if args.filetype is None:
+        args.filetype = conversions[args.custodian].keys()
+
+    for filetype in args.filetype:
+        conversion = conversions[args.custodian][filetype]
+        filenames = glob.glob(os.path.join(args.path, conversion[0]))
         for filename in filenames:
             conversion[1](filename)
-            os.rename(filename, filename[:-3]+conversion[2])
+            os.rename(filename, filename[:-3] + conversion[2])
+
+if __name__ == '__main__':
+    main()
