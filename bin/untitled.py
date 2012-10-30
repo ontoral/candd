@@ -3,17 +3,20 @@
 import os
 import argparse
 
+
 def main():
-    parser = argparse.ArgumentParser(description='convert downloaded data files to Fidelity format')
+    '''convert downloaded data files to Fidelity format'''
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', help='path where data files are stored',
-    					nargs='?',
+                        nargs='?',
                         default=os.environ.get('TIAA_CREF_DD', os.getcwd()))
-    parser.add_argument('-c', '--custodian', help='abbreviation for data file(s) provider',
-                        choices=['TC'], default='TC')
-    parser.add_argument('-f', '--filetype', help='the extension of a filetype to convert',
-                        choices=['sec', 'pri'], action='append') #, default=['sec', 'pri'])
+    parser.add_argument('-c', '--custodian', choices=['TC'], default='TC',
+                        help='abbreviation for data file(s) provider')
+    parser.add_argument('-f', '--filetype', choices=['sec', 'pri'],
+                        action='append',
+                        help='the extension of a filetype to convert')
     args = parser.parse_args()
     print args
 
 if __name__ == '__main__':
-	main()
+    main()
