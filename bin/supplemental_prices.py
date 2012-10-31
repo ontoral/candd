@@ -10,6 +10,7 @@ import wx.gizmos as gizmos
 
 import pricer
 
+
 class Blocker(object):
     """Context handler for blocking events from programmatic changes.
 
@@ -149,13 +150,13 @@ class MainFrame(wx.Frame):
             with file(self.symbol_file, 'w') as symbols:
                 symbols.write('\n'.join(self.ListBox.GetStrings()))
             self._clean = True
- 
+
         pricer.get_quotes(self.month, self.day, self.year,
                           self.symbol_file, self.download_dir)
 
         with file('settings.ini', 'w') as settings:
-            settings.write(self.symbol_file+'\n')
-            settings.write(self.download_dir+'\n')
+            settings.write(self.symbol_file + '\n')
+            settings.write(self.download_dir + '\n')
 
     def OnFBBChange(self, event):
         if self._blocking:
