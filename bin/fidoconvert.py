@@ -88,6 +88,8 @@ def convert_tiaa_cref_pri_file(infile):
 
 
 def main():
+    '''convert downloaded data files to Fidelity format'''
+
     # The conversions, as available, by custodian
     conversions = {
         'TC': {
@@ -96,7 +98,6 @@ def main():
         }
     }
 
-    '''convert downloaded data files to Fidelity format'''
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('path', nargs='?',
                         help='folder where data files are stored and converted',
