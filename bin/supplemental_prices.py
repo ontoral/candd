@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import os
-import sys
+import argparse
 import datetime
 
 import wx
@@ -210,13 +210,25 @@ class SupplementalPricesApp(wx.App):
         main_frame.Show()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        if sys.argv[1] == 'daily':
-            dt = datetime.date.today()
-            symbol_file = os.path.join('..', 'symbols.txt')
-            download_dir = os.path.join('..', 'supplemental-prices')
-            pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
-    else:
+def main():
+    '''download prices for a list of stock symbols on the current day'''
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-g', '--gui', action='store_true',
+                        help='run interactively in GUI mode')
+    # parser.add_argument('-i', '--interactive', action='store_true',
+    #                     help='run interactively in CLI mode')
+
+    args = parser.parse_args()
+    if args.gui:
         app = SupplementalPricesApp()
         app.MainLoop()
+    else:
+        dt = datetime.date.today()
+        symbol_file = os.path.join('..', 'symbols.txt')
+        download_dir = os.path.join('..', 'supplemental-prices')
+        pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
+
+
+if __name__ == '__main__':
+    main()
