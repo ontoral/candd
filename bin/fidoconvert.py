@@ -61,7 +61,7 @@ def get_date_from_tiaa_cref(tc_file):
 
 
 def convert_tiaa_cref_sec_file(infile):
-    '''Convert Securities export file from TIAA-CREF to Fidelity format.'''
+    '''Convert Securities export file (.SEC) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def sec(values, **kwargs):
@@ -75,7 +75,7 @@ def convert_tiaa_cref_sec_file(infile):
 
 
 def convert_tiaa_cref_pri_file(infile):
-    '''Convert Prices export file from TIAA-CREF to Fidelity format.'''
+    '''Convert Prices export file (.PRI) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def pri(values, outfile, **kwargs):
@@ -87,6 +87,118 @@ def convert_tiaa_cref_pri_file(infile):
     return convert_csv(infile, outfile, pri)
 
 
+def convert_tiaa_cref_pos_file(infile):
+    '''Convert Reconciliation export file (.POS) from TIAA-CREF to Fidelity format.'''
+    outfile = get_fidelity_path_from_tiaa_cref(infile)
+
+    def pos(values, outfile, **kwargs):
+        acct_num = values[0]
+        acct_type = values[1]
+        sec_type = values[2]
+        symbol = values[3]
+        quantity = values[4]
+        amount = values[5]
+        return '\n'.format(**locals())
+
+    return convert_csv(infile, outfile, pos)
+
+
+def convert_tiaa_cref_trd_file(infile):
+    '''Conver Portfolio export file (.TRD) from TIAA-CREF to Fidelity format.'''
+    outfile = get_fidelity_path_from_tiaa_cref(infile)
+    namfile = outfile[:-4] + '.nam'
+    accfile = outfile[:-4] + '.acc'
+
+    def trd_nam(values, **kwargs):
+        # broker = values[0]            # Not used
+        last_name = values[1]
+        first_name = values[2]
+        full_name = '{first_name} {last_name}'.format(**locals())
+        # Not sent by TIAA-CREF
+        # street = values[3]            # Not sent by TIAA-CREF
+        # address_2 = values[4]         # Not sent by TIAA-CREF
+        # address_3 = values[5]         # Not sent by TIAA-CREF
+        # address_4 = values[6]         # Not sent by TIAA-CREF
+        # address_5 = values[7]         # Not sent by TIAA-CREF
+        # address_6 = values[8]         # Not sent by TIAA-CREF
+        # city = values[9]              # Not sent by TIAA-CREF
+        # state = values[10]            # Not sent by TIAA-CREF
+        # zip_code  = values[11]        # Not used
+        tax_id = values[12]
+        tax_id4 = tax_id[-4:]
+        initials = first_name[0] + last_name[0]
+        acct_num = 'TCX{tax_id4}{initials}'.format(**locals())
+        tacct_num = 'F{acct_num}'.format(**locals())
+        # acct_num = values[13]         # Not used
+        # advisor_id = values[14]       # Not sent by TIAA-CREF
+        # taxable  = values[15]         # Not used
+        line = '{acct_num:11}{tacct_num:10} {full_name}\n'
+        return line.format(**locals())
+
+    def trd_acc(values, accfile, **kwargs):
+        skip = ''
+        # broker = values[0]
+        last_name = values[1]
+        first_name = values[2]
+        full_name = '{first_name} {last_name}'.format(**locals())
+        # street = values[3]
+        # address_2 = values[4]
+        # address_3 = values[5]
+        # address_4 = values[6]
+        # address_5 = values[7]
+        # address_6 = values[8]
+        # city = values[9]
+        # state = values[10]
+        # zip_code  = values[11]
+        tax_id = values[12]
+        tax_id4 = tax_id[-4:]
+        initials = first_name[0] + last_name[0]
+        acct_num = 'TCX{tax_id4}{initials}'.format(**locals())
+        tacct_num = 'F{acct_num}'.format(**locals())
+        # acct_num = values[13]
+        # advisor_id = values[14]
+        # taxable  = values[15]
+        pc_datestr = os.path.basename(outfile)[2:8]
+        day = int(pc_datestr[:2])
+        month = int(pc_datestr[2:4])
+        year = 2000 + int(pc_datestr[4:])
+        date_str = '{year:4d}{month:2d}{day:2d}'.format(**locals())
+        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{registration:24}{skip:6}{date_str:12} FIFO N\n'
+        return line.format(**locals())
+
+    nam = convert_csv(infile, namfile, trd_nam)
+    acc = convert_csv(infile, accfile, trd_acc)
+    return nam and acc
+
+
+def convert_tiaa_cref_trn_file(infile):
+    '''Convert Transaction export file (.TRN) from TIAA-CREF to Fidelity format.'''
+    outfile = get_fidelity_path_from_tiaa_cref(infile)
+
+    def trn(values, outfile, **kwargs):
+        broker = values[0]
+        # values[1] not used
+        acct_num = values[2]
+        trans_code = values[3]
+        cancel = values[4]
+        symbol = values[5]
+        sec_code = values[6]
+        trade_date = values[7]
+        quantity = values[8]
+        net_amount = values[9]
+        gross_amount = values[10]
+        broker_fee = values[11]
+        other_fee = values[12]
+        settle_date = values[13]
+        from_to = values[14]
+        # values[15] not used
+        interest = values[16]
+        comment = values[17]
+        return '\n'.format(**locals())
+
+    return convert_csv(infile, outfile, trn)
+
+
 def main():
     '''convert downloaded data files to Fidelity format'''
 
@@ -95,6 +207,7 @@ def main():
         'TC': {
             'pri': ('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
             'sec': ('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
+            'trd': ('[aA][dD]*.[tT][rR][dD]', convert_tiaa_cref_trd_file, 'bcc'),
         }
     }
 
@@ -104,7 +217,7 @@ def main():
                         default=os.environ.get('TIAA_CREF_DD', os.getcwd()))
     parser.add_argument('-c', '--custodian', choices=['TC'], default='TC',
                         help='abbreviation for data file(s) provider')
-    parser.add_argument('-f', '--filetype', choices=['sec', 'pri'],
+    parser.add_argument('-f', '--filetype', choices=['sec', 'pri', 'trd'],
                         action='append',
                         help='the extension of a filetype to convert')
     args = parser.parse_args()
