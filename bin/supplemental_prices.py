@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import os
-import sys
+import argparse
 import datetime
 
 import wx
@@ -9,6 +9,7 @@ from wx.lib.filebrowsebutton import DirBrowseButton, FileBrowseButton
 import wx.gizmos as gizmos
 
 import pricer
+
 
 class Blocker(object):
     """Context handler for blocking events from programmatic changes.
@@ -149,13 +150,13 @@ class MainFrame(wx.Frame):
             with file(self.symbol_file, 'w') as symbols:
                 symbols.write('\n'.join(self.ListBox.GetStrings()))
             self._clean = True
- 
+
         pricer.get_quotes(self.month, self.day, self.year,
                           self.symbol_file, self.download_dir)
 
         with file('settings.ini', 'w') as settings:
-            settings.write(self.symbol_file+'\n')
-            settings.write(self.download_dir+'\n')
+            settings.write(self.symbol_file + '\n')
+            settings.write(self.download_dir + '\n')
 
     def OnFBBChange(self, event):
         if self._blocking:
@@ -209,13 +210,25 @@ class SupplementalPricesApp(wx.App):
         main_frame.Show()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        if sys.argv[1] == 'daily':
-            dt = datetime.date.today()
-            symbol_file = os.path.join('..', 'symbols.txt')
-            download_dir = os.path.join('..', 'supplemental-prices')
-            pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
-    else:
+def main():
+    '''download prices for a list of stock symbols on the current day'''
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-g', '--gui', action='store_true',
+                        help='run interactively in GUI mode')
+    # parser.add_argument('-i', '--interactive', action='store_true',
+    #                     help='run interactively in CLI mode')
+
+    args = parser.parse_args()
+    if args.gui:
         app = SupplementalPricesApp()
         app.MainLoop()
+    else:
+        dt = datetime.date.today()
+        symbol_file = os.path.join('..', 'symbols.txt')
+        download_dir = os.path.join('..', 'supplemental-prices')
+        pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
+
+
+if __name__ == '__main__':
+    main()

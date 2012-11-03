@@ -16,8 +16,10 @@ class PriceParser(HTMLParser):
     tag = None
     closing_price_found = False
     price = -1
+
     def handle_starttag(self, tag, attrs):
         self.tag = tag
+
     def handle_data(self, data):
         if self.tag == 'th':
             if data.strip() == 'Closing Price:':
@@ -26,7 +28,7 @@ class PriceParser(HTMLParser):
             data = ''.join(data.strip().split(','))
             try:
                 self.price = float(data)
-            except ValueError, e:
+            except ValueError:
                 self.price = 0.0
             self.closing_price_found = False
 
@@ -35,6 +37,7 @@ def get_date(month, day, year):
     if month is None:
         return datetime.date.today()
     return datetime.date(year, month, day)
+
 
 def get_quote(symbol, month=None, day=None, year=None):
     date = get_date(month, day, year)
@@ -49,6 +52,7 @@ def get_quote(symbol, month=None, day=None, year=None):
     print '{price_date} price for {symbol:8} = {parser.price:8.02f}'.format(**locals())
 
     return parser.price
+
 
 def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
                download_dir=None):
@@ -71,7 +75,7 @@ def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
     if download_dir and os.path.exists(download_dir) and len(quotes):
         filename = 'fi{date_str}.pri'.format(**locals())
         outfile = os.path.join(download_dir, filename)
-        print 'File: '+outfile
+        print 'File: ' + outfile
         with file(outfile, 'w') as out:
             out.write(''.join(quotes))
 
