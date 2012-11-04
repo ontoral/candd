@@ -135,7 +135,7 @@ def convert_tiaa_cref_trd_file(infile):
         line = '{acct_num:11}{tacct_num:10} {full_name}\n'
         return line.format(**locals())
 
-    def trd_acc(values, accfile, **kwargs):
+    def trd_acc(values, outfile, **kwargs):
         skip = ''
         # broker = values[0]
         last_name = values[1]
@@ -159,11 +159,11 @@ def convert_tiaa_cref_trd_file(infile):
         # advisor_id = values[14]
         # taxable  = values[15]
         pc_datestr = os.path.basename(outfile)[2:8]
-        day = int(pc_datestr[:2])
-        month = int(pc_datestr[2:4])
+        month = int(pc_datestr[:2])
+        day = int(pc_datestr[2:4])
         year = 2000 + int(pc_datestr[4:])
-        date_str = '{year:4d}{month:2d}{day:2d}'.format(**locals())
-        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{registration:24}{skip:6}{date_str:12} FIFO N\n'
+        date_str = '{year:4d}{month:02d}{day:02d}'.format(**locals())
+        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{skip:30}{date_str:12} FIFO N\n'
         return line.format(**locals())
 
     nam = convert_csv(infile, namfile, trd_nam)
