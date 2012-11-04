@@ -106,8 +106,6 @@ def convert_tiaa_cref_pos_file(infile):
 def convert_tiaa_cref_trd_file(infile):
     '''Conver Portfolio export file (.TRD) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
-    namfile = outfile[:-4] + '.nam'
-    accfile = outfile[:-4] + '.acc'
 
     def trd_nam(values, **kwargs):
         # broker = values[0]            # Not used
@@ -163,11 +161,13 @@ def convert_tiaa_cref_trd_file(infile):
         day = int(pc_datestr[2:4])
         year = 2000 + int(pc_datestr[4:])
         date_str = '{year:4d}{month:02d}{day:02d}'.format(**locals())
-        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{skip:30}{date_str:12} FIFO N\n'
+        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{skip:35}{date_str:12} FIFO N\n'
         return line.format(**locals())
 
-    nam = convert_csv(infile, namfile, trd_nam)
-    acc = convert_csv(infile, accfile, trd_acc)
+    outfile = outfile[:-4] + '.nam'
+    nam = convert_csv(infile, outfile, trd_nam)
+    outfile = outfile[:-4] + '.acc'
+    acc = convert_csv(infile, outfile, trd_acc)
     return nam and acc
 
 
@@ -220,6 +220,8 @@ def main():
     parser.add_argument('-f', '--filetype', choices=['sec', 'pri', 'trd'],
                         action='append',
                         help='the extension of a filetype to convert')
+    parser.add_argument('-n', '--no-rename', action='store_true',
+                        help='original files are not renamed after conversion')
     args = parser.parse_args()
     if args.filetype is None:
         args.filetype = conversions[args.custodian].keys()
@@ -229,7 +231,8 @@ def main():
         filenames = glob.glob(os.path.join(args.path, conversion[0]))
         for filename in filenames:
             conversion[1](filename)
-            os.rename(filename, filename[:-3] + conversion[2])
+            if not args.no_rename:
+                os.rename(filename, filename[:-3] + conversion[2])
 
 if __name__ == '__main__':
     main()
