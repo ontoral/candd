@@ -81,9 +81,6 @@ def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
 
 
 if __name__ == '__main__':
-##    with file('log.txt', 'w') as logfile:
-##        logfile.write(str(sys.argv))
-
     symbol_file = os.environ.get('SYMBOL_FILE',
                                  os.path.join('..', 'symbols.txt'))
     download_dir = os.environ.get('PRICE_DD',
