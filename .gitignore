@@ -3,6 +3,7 @@ password.txt
 _PROJECT.DAT
 *.py[co]
 *.pri
+*.out
 
 # Packages
 *.egg
