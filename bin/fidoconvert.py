@@ -202,12 +202,31 @@ def convert_tiaa_cref_trn_file(infile):
 def main():
     '''convert downloaded data files to Fidelity format'''
 
+    # Small class to collect conversion details
+    class Conversion(object):
+        def __init__(self, glob_pattern, converter, backup_extension):
+            self.glob_pattern = glob_pattern
+            self.converter = converter
+            self.backup_extension = backup_extension
+
+        def convert_path(self, path, skip_backup=False):
+            print 'Matching ' + self.glob_pattern
+            filenames = glob.iglob(os.path.join(path, self.glob_pattern))
+            print '\t', list(filenames)
+            if not skip_backup:
+                print '\t', 'Backing up files to *.{0}'.format(self.backup_extension)
+            for filename in filenames:
+                self.converter(filename)
+                if not skip_backup:
+                    os.rename(filename, filename[:-3] + self.backup_extension)
+            print '----'
+
     # The conversions, as available, by custodian
-    conversions = {
-        'TC': {
-            'pri': ('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
-            'sec': ('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
-            'trd': ('[aA][dD]*.[tT][rR][dD]', convert_tiaa_cref_trd_file, 'bcc'),
+    custodians = {
+        'tiaacref': {
+            'pri': Conversion('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
+            'sec': Conversion('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
+#            'trd': Conversion('[aA][dD]*.[tT][rR][dD]', convert_tiaa_cref_trd_file, 'bcc'),
         }
     }
 
@@ -215,24 +234,27 @@ def main():
     parser.add_argument('path', nargs='?',
                         help='folder where data files are stored and converted',
                         default=os.environ.get('TIAA_CREF_DD', os.getcwd()))
-    parser.add_argument('-c', '--custodian', choices=['TC'], default='TC',
+    parser.add_argument('-c', '--custodian', choices=['tiaacref'], default='tiaacref',
                         help='abbreviation for data file(s) provider')
-    parser.add_argument('-f', '--filetype', choices=['sec', 'pri', 'trd'],
+    parser.add_argument('-f', '--filetype', choices=['sec', 'pri'],  # , 'trd'],
                         action='append',
                         help='the extension of a filetype to convert')
-    parser.add_argument('-n', '--no-rename', action='store_true',
+    parser.add_argument('-s', '--skip-backup', action='store_true',
                         help='original files are not renamed after conversion')
     args = parser.parse_args()
-    if args.filetype is None:
-        args.filetype = conversions[args.custodian].keys()
 
+    # Get the conversions from the chosen custodian
+    conversions = custodians[args.custodian]
+
+    # If no filetype is given, choose all filetypes for current custodian
+    if args.filetype is None:
+        args.filetype = conversions.iterkeys()
+
+    # Convert each filetype
     for filetype in args.filetype:
-        conversion = conversions[args.custodian][filetype]
-        filenames = glob.glob(os.path.join(args.path, conversion[0]))
-        for filename in filenames:
-            conversion[1](filename)
-            if not args.no_rename:
-                os.rename(filename, filename[:-3] + conversion[2])
+        print 'Converting {0} files for custodian: {1}'.format(filetype, args.custodian)
+        conversion = conversions[filetype]
+        conversion.convert_path(args.path, args.skip_backup)
 
 if __name__ == '__main__':
     main()
