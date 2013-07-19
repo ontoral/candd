@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+import argparse
+import datetime
 import os
 import sys
 import urllib
-import datetime
 
 from HTMLParser import HTMLParser
 
@@ -33,14 +34,14 @@ class PriceParser(HTMLParser):
             self.closing_price_found = False
 
 
-def get_date(month, day, year):
-    if month is None:
+def get_date(year, month, day):
+    if year is None:
         return datetime.date.today()
     return datetime.date(year, month, day)
 
 
-def get_quote(symbol, month=None, day=None, year=None):
-    date = get_date(month, day, year)
+def get_quote(symbol, year=None, month=None, day=None):
+    date = get_date(year, month, day)
     url_date = date.strftime(URL_FORMAT)
     base_url = 'http://bigcharts.marketwatch.com/historical/default.asp?symb={symbol}&closeDate={url_date}&'
     content = urllib.urlopen(base_url.format(**locals())).read()
@@ -54,33 +55,48 @@ def get_quote(symbol, month=None, day=None, year=None):
     return parser.price
 
 
-def get_quotes(month=None, day=None, year=None, symbol_file='symbols.txt',
-               download_dir=None):
-    date = get_date(month, day, year)
-    date_str = date.strftime(PC_FORMAT)
+def get_quotes(symbols, year=None, month=None, day=None):
     quotes = []
 
-    if not os.path.exists(symbol_file):
-        return
-    with file(symbol_file, 'r') as symbols:
-        for symbol in symbols:
-            symbol = symbol.strip()
-            if not symbol or symbol.startswith('#'):
-                continue
-            price = get_quote(symbol, date.month, date.day, date.year)
-            if price >= 0:
-                entry = '{symbol:9}{price:>64.02f}{date_str}\n'.format(**locals())
-                quotes.append(entry)
+    for symbol in symbols:
+        price = get_quote(symbol, year, month, day)
+        if price >= 0:
+            quotes.append((symbol, price))
 
-    if download_dir and os.path.exists(download_dir) and len(quotes):
+    return quotes
+
+
+def read_symbol_file(symbol_file='symbols.txt'):
+    symbols = []
+
+    if os.path.exists(symbol_file):
+        with open(symbol_file, 'r') as f:
+            for symbol in f:
+                symbol = symbol.strip()
+            if symbol.startswith('#'):
+                symbol = ''
+            if symbols != '':
+                symbols.append(symbol)
+
+    return symbols
+
+
+def write_quotes_file(quotes, date_str, directory=None):
+    if directory and os.path.exists(directory) and len(quotes):
+        # Get output filename
         filename = 'fi{date_str}.pri'.format(**locals())
-        outfile = os.path.join(download_dir, filename)
+        outfile = os.path.join(directory, filename)
         print 'File: ' + outfile
+
+        # Create and write quote entries
+        entries = ['{quote[0]:9}{quote[1]:>64.02f}{date_str}'.format(**locals()) for quote in quotes]
         with file(outfile, 'w') as out:
-            out.write(''.join(quotes))
+            out.write('\n'.join(entries))
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+
     symbol_file = os.environ.get('SYMBOL_FILE',
                                  os.path.join('..', 'symbols.txt'))
     download_dir = os.environ.get('PRICE_DD',
@@ -95,7 +111,13 @@ if __name__ == '__main__':
         month = int(raw_input('   Month (1-12): '))
         day = int(raw_input('   Day (1-31): '))
         year = int(raw_input('   Year (ex. 2012): '))
+        this_year = datetime.date.today().year
+        if year % 100 <= this_year % 100:
+            year += 2000
+        else:
+            year += 1900
         dt = datetime.date(year, month, day)
+        date_str = dt.strftime(PC_FORMAT)
 
         # Locate symbol file and download directory
         symbols = raw_input('   Symbol file ({symbol_file}): '.format(**locals()))
@@ -103,4 +125,6 @@ if __name__ == '__main__':
         symbol_file = symbols if len(symbols) else symbol_file
         download_dir = downloads if len(downloads) else download_dir
 
-    get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
+    symbols = read_symbol_file(symbol_file)
+    quotes = get_quotes(symbols, year, month, day)
+    write_quotes_file(quotes, date_str, download_dir)
