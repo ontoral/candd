@@ -81,17 +81,24 @@ def read_symbol_file(symbol_file='symbols.txt'):
     return symbols
 
 
-def write_quotes_file(quotes, date_str, directory=None):
-    if directory and os.path.exists(directory) and len(quotes):
-        # Get output filename
-        filename = 'fi{date_str}.pri'.format(**locals())
-        outfile = os.path.join(directory, filename)
-        print 'File: ' + outfile
+def write_quotes_file(quotes, date_str, download_dir):
+    """Build a fixed width quotes file from a collection of symbols and prices."""
+    if not os.path.exists(download_dir):
+        print 'Download directory does not exist.'
+        return
 
-        # Create and write quote entries
-        entries = ['{quote[0]:9}{quote[1]:>64.02f}{date_str}'.format(**locals()) for quote in quotes]
-        with file(outfile, 'w') as out:
-            out.write('\n'.join(entries))
+    if not quotes:
+        return
+
+    # Get output filename
+    filename = 'fi{date_str}.pri'.format(**locals())
+    outfile = os.path.join(download_dir, filename)
+    print 'File: ' + outfile
+
+    # Create and write quote entries
+    entries = ['{symbol:9}{price:>64.02f}{date_str}'.format(**locals()) for symbol, price in quotes]
+    with file(outfile, 'a') as out:
+        out.write('\n'.join(entries))
 
 
 if __name__ == '__main__':
