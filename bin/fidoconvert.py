@@ -212,7 +212,6 @@ def main():
         def convert_path(self, path, skip_backup=False):
             print 'Matching ' + self.glob_pattern
             filenames = glob.iglob(os.path.join(path, self.glob_pattern))
-            print '\t', list(filenames)
             if not skip_backup:
                 print '\t', 'Backing up files to *.{0}'.format(self.backup_extension)
             for filename in filenames:
