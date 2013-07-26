@@ -73,10 +73,10 @@ def read_symbol_file(symbol_file='symbols.txt'):
         with open(symbol_file, 'r') as f:
             for symbol in f:
                 symbol = symbol.strip()
-            if symbol.startswith('#'):
-                symbol = ''
-            if symbols != '':
-                symbols.append(symbol)
+                if symbol.startswith('#'):
+                    symbol = ''
+                if symbols != '':
+                    symbols.append(symbol)
 
     return symbols
 
