@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Standard libraries
 import argparse
 import datetime
@@ -6,6 +8,36 @@ import os
 # Custom modules
 import pricer
 
+
+skips = ['1402', '1926', '1933', '1934', 'FRCMQ', 'KBS']
+
+def noflow(data, download_dir=None):
+    date = None
+    symbols = None
+
+    for line in data:
+        if not line.startswith('Receipt'):
+            continue
+        new_date = line[16:24]
+        if new_date != date:
+            if date:
+                m, d, y = date.split('/')
+                year = int(y) % 100
+                if year <= datetime.date.today().year % 100:
+                    year += 2000
+                else:
+                    year += 1900
+                month = int(m)
+                day = int(d)
+
+                symbols = [symbol for symbol in symbols if not symbol in skips]
+                quotes = pricer.get_quotes(symbols, year, month, day)
+                date_str = ''.join(date.split('/'))
+                pricer.write_quotes_file(quotes, date_str, download_dir)
+
+            date = new_date
+            symbols = []
+        symbols.append(line[26:42].strip())
 
 def unpriced(data, download_dir=None):
     date = None
@@ -24,6 +56,7 @@ def unpriced(data, download_dir=None):
                 month = int(m)
                 day = int(d)
 
+                symbols = [symbol for symbol in symbols if not symbol in skips]
                 quotes = pricer.get_quotes(symbols, year, month, day)
                 date_str = ''.join(date.split('/'))
                 pricer.write_quotes_file(quotes, date_str, download_dir)
@@ -46,7 +79,7 @@ sections = ['Unpriced Securities',
 functions = [unpriced,
              None,
              None,
-             None,
+             noflow,
              None,
              None,
              None,
