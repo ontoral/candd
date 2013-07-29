@@ -68,7 +68,7 @@ def noflow(data, download_dir):
     """'No Market Value for Flow' handler
 
     "Receipt of Securities" with no price info get downloaded."""
-    download_missing_prices(data, download_dir, 16, 26, '^Receipt.*')
+    download_missing_prices(data, download_dir, 16, 26, '^Receipt|^Transfer.*')
 
 
 def unpriced(data, download_dir=None):
@@ -80,20 +80,26 @@ def unpriced(data, download_dir=None):
 
 def main(filename, download_dir=None):
     # Create a function lookup dict to handle sections of BSR
-    sections = ['Unpriced Securities',
+    sections = ['Missing Price Files',
+                'Unpriced Securities',
                 'Portfolios with Inception Date After Requested Date Range',
+                'No Inception Date for Portfolio',
                 'Cash Flows Exceeding  10.000% of Interval Beginning Value',
                 'No Market Value for Flow',
                 'Journal Entries',
                 'Trades to None',
+                'Inception Flows for Group Members',
                 'Unmanaged Asset Flows',
                 'Beginning Interval Value does not match the ending value of the previous interval - Portfolio Level',
                 'Beginning Interval Value does not match the ending value of the previous interval - Asset Class Level',
                 'Invalid Computed Intervals']
-    functions = [unpriced,
+    functions = [None,
+                 None,
+                 None,
                  None,
                  None,
                  noflow,
+                 None,
                  None,
                  None,
                  None,
@@ -148,10 +154,11 @@ def main(filename, download_dir=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', nargs=1,
+    parser.add_argument('filename',
                         help='batch status report stored as a text file')
     parser.add_argument('-d', '--download-directory', nargs='?',
                         help='destination for new price files')
     args = parser.parse_args()
 
     main(args.filename, args.download_directory)
+
