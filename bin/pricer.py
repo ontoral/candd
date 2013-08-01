@@ -117,9 +117,9 @@ if __name__ == '__main__':
         # Get date
         month = int(raw_input('   Month (1-12): '))
         day = int(raw_input('   Day (1-31): '))
-        year = int(raw_input('   Year (ex. 2012): '))
-        this_year = datetime.date.today().year
-        if year % 100 <= this_year % 100:
+        year = int(raw_input('   Year (ex. 2012): ')) % 100
+        this_year = datetime.date.today().year % 100
+        if year <= this_year:
             year += 2000
         else:
             year += 1900
