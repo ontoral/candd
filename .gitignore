@@ -4,6 +4,7 @@ _PROJECT.DAT
 *.py[co]
 *.pri
 *.out
+*.swp
 
 # Packages
 *.egg
