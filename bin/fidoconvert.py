@@ -8,12 +8,12 @@ import argparse
 PC_DATE_FORMAT = '%m%d%y'
 
 
-def convert_csv(infile, outfile, converter=None):
+def convert_csv(infile, outfile, converter=None, file=None):
     '''General purpose .CSV file conversion engine.'''
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
-    with file(infile, 'r') as src:
-        with file(outfile, 'w') as dst:
+    with file or open(infile, 'r') as src:
+        with open(outfile, 'w') as dst:
             for line in src:
                 values = line.split(',')
                 conv = converter(**locals()) if converter else src
@@ -21,12 +21,12 @@ def convert_csv(infile, outfile, converter=None):
     return True
 
 
-def convert_fixed(infile, outfile, fields, converter=None):
+def convert_fixed(infile, outfile, fields, converter=None, file=None):
     '''General purpose fixed-width file conversion engine.'''
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
-    with file(infile, 'r') as src:
-        with file(outfile, 'w') as dst:
+    with file or open(infile, 'r') as src:
+        with open(outfile, 'w') as dst:
             for line in src:
                 values = []
                 for field in fields:
@@ -40,28 +40,23 @@ def convert_fixed(infile, outfile, fields, converter=None):
 def get_fidelity_path_from_tiaa_cref(tc_path):
     '''Generates a Fidelity export file path from a TIAA-CREF file path.'''
     # Get date
-    filename = os.path.basename(tc_path)
-    date = get_date_from_tiaa_cref(filename)
-
-    # Get output filename
-    path = os.path.dirname(tc_path)
-    ext = filename[-3:].lower()
-    pc_datestr = date.strftime(PC_DATE_FORMAT)
-    return os.path.join(path, 'fi{pc_datestr}.{ext}'.format(**locals()))
-
-
-def get_date_from_tiaa_cref(tc_file):
-    '''Parse export file date from TIAA-CREF filename.'''
-    # Get date components
+    tc_file = os.path.basename(tc_path)
     yr = int(tc_file[2:4]) + 2000
     mo = int(tc_file[4:6])
     dy = int(tc_file[6:8])
+    date = datetime.date(yr, mo, dy)
 
-    return datetime.date(yr, mo, dy)
+    # Get output filename
+    path = os.path.dirname(tc_path)
+    ext = tc_file[-3:].lower()
+    pc_datestr = date.strftime(PC_DATE_FORMAT)
+    filename = 'fi{pc_datestr}.{ext}'.format(**locals())
+
+    return os.path.join(path, filename)
 
 
-def convert_tiaa_cref_sec_file(infile):
-    '''Convert Securities export file (.SEC) from TIAA-CREF to Fidelity format.'''
+def convert_tiaa_cref_sec_file(infile, file=None):
+    '''Convert Securities export (.SEC) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def sec(values, **kwargs):
@@ -69,26 +64,30 @@ def convert_tiaa_cref_sec_file(infile):
         sec_type = 'MF'
         desc = values[2][0:40]
         cusip = values[21]
-        return '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00\n'.format(**locals())
+        output = '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00\n'
 
-    return convert_csv(infile, outfile, sec)
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, sec, file)
 
 
-def convert_tiaa_cref_pri_file(infile):
-    '''Convert Prices export file (.PRI) from TIAA-CREF to Fidelity format.'''
+def convert_tiaa_cref_pri_file(infile, file=None):
+    '''Convert Prices export (.PRI) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def pri(values, outfile, **kwargs):
         symbol = values[0]
         price = float(values[3])
         pc_datestr = os.path.basename(outfile)[2:8]
-        return '{symbol:58}{price:>15.07f}{pc_datestr}\n'.format(**locals())
+        output = '{symbol:58}{price:>15.07f}{pc_datestr}\n'
 
-    return convert_csv(infile, outfile, pri)
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, pri, file)
 
 
-def convert_tiaa_cref_pos_file(infile):
-    '''Convert Reconciliation export file (.POS) from TIAA-CREF to Fidelity format.'''
+def convert_tiaa_cref_pos_file(infile, file=None):
+    '''Convert Reconciliation export (.POS) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def pos(values, outfile, **kwargs):
@@ -98,13 +97,15 @@ def convert_tiaa_cref_pos_file(infile):
         symbol = values[3]
         quantity = values[4]
         amount = values[5]
-        return '\n'.format(**locals())
+        output = '\n'
 
-    return convert_csv(infile, outfile, pos)
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, pos, file)
 
 
-def convert_tiaa_cref_trd_file(infile):
-    '''Conver Portfolio export file (.TRD) from TIAA-CREF to Fidelity format.'''
+def convert_tiaa_cref_trd_file(infile, file=None):
+    '''Conver Portfolio export (.TRD) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def trd_nam(values, **kwargs):
@@ -130,8 +131,9 @@ def convert_tiaa_cref_trd_file(infile):
         # acct_num = values[13]         # Not used
         # advisor_id = values[14]       # Not sent by TIAA-CREF
         # taxable  = values[15]         # Not used
-        line = '{acct_num:11}{tacct_num:10} {full_name}\n'
-        return line.format(**locals())
+        output = '{acct_num:11}{tacct_num:10} {full_name}\n'
+
+        return output.format(**locals())
 
     def trd_acc(values, outfile, **kwargs):
         skip = ''
@@ -161,18 +163,21 @@ def convert_tiaa_cref_trd_file(infile):
         day = int(pc_datestr[2:4])
         year = 2000 + int(pc_datestr[4:])
         date_str = '{year:4d}{month:02d}{day:02d}'.format(**locals())
-        line = '{acct_num:14} {skip:16}{full_name:20}{skip:5}{tacct_num:10}{skip:35}{date_str:12} FIFO N\n'
-        return line.format(**locals())
+        output = ('{acct_num:14} {skip:16}{full_name:20}{skip:5}'
+                  '{tacct_num:10}{skip:35}{date_str:12} FIFO N\n')
+
+        return output.format(**locals())
 
     outfile = outfile[:-4] + '.nam'
-    nam = convert_csv(infile, outfile, trd_nam)
+    nam = convert_csv(infile, outfile, trd_nam, file)
     outfile = outfile[:-4] + '.acc'
-    acc = convert_csv(infile, outfile, trd_acc)
+    acc = convert_csv(infile, outfile, trd_acc, file)
+
     return nam and acc
 
 
-def convert_tiaa_cref_trn_file(infile):
-    '''Convert Transaction export file (.TRN) from TIAA-CREF to Fidelity format.'''
+def convert_tiaa_cref_trn_file(infile, file=None):
+    '''Convert Transaction export (.TRN) from TIAA-CREF to Fidelity format.'''
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def trn(values, outfile, **kwargs):
@@ -194,9 +199,11 @@ def convert_tiaa_cref_trn_file(infile):
         # values[15] not used
         interest = values[16]
         comment = values[17]
-        return '\n'.format(**locals())
+        output = '\n'
 
-    return convert_csv(infile, outfile, trn)
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, trn, file)
 
 
 def main():
