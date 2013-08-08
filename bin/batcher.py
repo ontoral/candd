@@ -94,7 +94,7 @@ def main(filename, download_dir=None):
                 'Beginning Interval Value does not match the ending value of the previous interval - Asset Class Level',
                 'Invalid Computed Intervals']
     functions = [None,
-                 None,
+                 unpriced,
                  None,
                  None,
                  None,
