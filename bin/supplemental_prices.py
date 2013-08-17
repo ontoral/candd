@@ -151,8 +151,8 @@ class MainFrame(wx.Frame):
                 symbols.write('\n'.join(self.ListBox.GetStrings()))
             self._clean = True
 
-        pricer.get_quotes(self.month, self.day, self.year,
-                          self.symbol_file, self.download_dir)
+        dt = datetime.date(self.year, self.month, self.day)
+        pricer.download_date(self.ListBox.GetStrings(), dt, self.download_dir)
 
         with file('settings.ini', 'w') as settings:
             settings.write(self.symbol_file + '\n')
@@ -226,8 +226,9 @@ def main():
     else:
         dt = datetime.date.today()
         symbol_file = os.path.join('..', 'symbols.txt')
+        symbols = pricer.read_symbol_file(symbol_file)
         download_dir = os.path.join('..', 'supplemental-prices')
-        pricer.get_quotes(dt.month, dt.day, dt.year, symbol_file, download_dir)
+        pricer.download_date(symbols, dt, download_dir)
 
 
 if __name__ == '__main__':

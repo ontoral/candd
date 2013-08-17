@@ -52,9 +52,11 @@ def download_missing_prices(data, download_dir, date_start=0, symbol_start=8,
                 month = int(m)
                 day = int(d)
 
-                quotes = pricer.get_quotes(symbols, year, month, day)
+                dt = datetime.date(year, month, day)
+                quotes = pricer.get_quotes(symbols, dt)
                 date_str = ''.join(date.split('/'))
-                pricer.write_quotes_file(quotes, date_str, download_dir)
+                filename = os.path.join(download_dir, 'fi{0}.pri'.format(date_str))
+                pricer.write_quotes_file(quotes, filename, date_str)
 
             date = new_date
             symbols = set()

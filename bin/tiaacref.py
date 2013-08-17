@@ -11,7 +11,7 @@ import argparse
 import glob
 import os
 import re
-import zipfile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 # Custom modules
 import fidoconvert
@@ -36,7 +36,7 @@ def main(source, destination):
     # Inspect any archives found, process supported files, and store long-term
     for archive in archives:
         # Open each archive and translate relevant files
-        creffile = zipfile.ZipFile(archive)
+        creffile = ZipFile(archive)
         for name in creffile.namelist():
             if regexp.match(name):
                 # Use file extension to determine conversion
@@ -44,9 +44,9 @@ def main(source, destination):
                 converter(os.path.join(destination, name), creffile.open(name)) 
 
         # Store archive in long-term storage and delete
-        with zipfile.ZipFile(storage, 'a') as longterm:
+        with ZipFile(storage, 'a') as longterm:
             longterm.write(archive, arcname=os.path.basename(archive),
-                           compress_type=zipfile.ZIP_DEFLATED)
+                           compress_type=ZIP_DEFLATED)
         try:
             os.remove(archive)
         except OSError:
