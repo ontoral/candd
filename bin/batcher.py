@@ -80,7 +80,8 @@ def unpriced(data, download_dir=None):
 
 def main(filename, download_dir=None):
     # Create a function lookup dict to handle sections of BSR
-    sections = ['Unpriced Securities',
+    sections = ['Missing Price Files'
+                'Unpriced Securities',
                 'Portfolios with Inception Date After Requested Date Range',
                 'Cash Flows Exceeding  10.000% of Interval Beginning Value',
                 'No Market Value for Flow',
@@ -90,7 +91,8 @@ def main(filename, download_dir=None):
                 'Beginning Interval Value does not match the ending value of the previous interval - Portfolio Level',
                 'Beginning Interval Value does not match the ending value of the previous interval - Asset Class Level',
                 'Invalid Computed Intervals']
-    functions = [unpriced,
+    functions = [None,
+                 unpriced,
                  None,
                  None,
                  noflow,
