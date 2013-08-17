@@ -5,6 +5,9 @@ _PROJECT.DAT
 *.pri
 *.out
 *.sw[op]
+*.TRD
+*.nam
+*.acc
 
 # Packages
 *.egg
