@@ -7,6 +7,7 @@ _PROJECT.DAT
 *.TRD
 *.nam
 *.acc
+*.swp
 
 # Packages
 *.egg
