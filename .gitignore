@@ -9,6 +9,8 @@ _PROJECT.DAT
 *.nam
 *.acc
 
+session.vim
+
 # Packages
 *.egg
 *.egg-info
