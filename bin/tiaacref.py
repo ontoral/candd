@@ -87,7 +87,7 @@ def main(daily=False, source=None, destination=None):
 
         # Create an archive from web downloaded data
         filename = os.path.join(source, filename)
-        with open(filename, 'w') as datafile:
+        with open(filename, 'w+b') as datafile:
             datafile.write(current_data)
 
         archives = [filename]
