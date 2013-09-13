@@ -17,7 +17,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import fidoconvert
 
 
-def main(source, destination):
+def main(source=None, destination=None):
     # Use directories from environment vars if none are given
     if source is None:
         source = os.environ.get('DOWNLOADS', os.getcwd())
