@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+# Standard library imports
 import os
 import re
+from StringIO import StringIO
 from zipfile import ZipFile
 
+# Other imports
 import mechanize
 
 
@@ -39,7 +42,7 @@ def download_current_data():
     print 'download complete!'
 
     regexp = re.compile('.*filename=(.*)')
-    filename = regexp.findall(browser.response().info())[0]
+    filename = regexp.findall(str(browser.response().info()))[0].strip()
 
     return browser.response().get_data(), filename
 
@@ -47,18 +50,21 @@ def download_current_data():
 def main():
     # Download data and open as a zip archive
     data, filename = download_current_data()
-    return
-
-    with ZipFile(filename, 'w') as zipped:
-        zipped.write(data)
-    print 'Archive stored as', filename
 
     # Extract files with matching extensions
-    with ZipFile(filename) as z:
-        for f in z.namelist():
+    with ZipFile(StringIO(data)) as zipped:
+        for f in zipped.namelist():
             if f.lower()[-3:] in ['pri', 'sec']:
                 print '\textracting', f
-                z.extract(f, path=DD)
+                zipped.extract(f, path=DD)
+
+    # Add full download zip to permanent archive
+    with ZipFile(os.path.join(DD, 'archives.zip'), 'a') as zipped:
+        zipped.writestr(filename, data)
+    print 'Archive stored as', filename
+
+    from tiaacref import main as tc
+    tc()
 
 
 if __name__ == '__main__':
