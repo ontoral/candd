@@ -6,7 +6,7 @@ import glob
 import re
 
 
-SCHWAB_EXPORTS = '.'
+SCHWAB_DD = '.'
 
 class SchwabDialect(csv.Dialect):
     def __init__(self):
@@ -16,9 +16,9 @@ class SchwabDialect(csv.Dialect):
         self.quoting = csv.QUOTE_ALL
 csv.register_dialect('schwab_export', SchwabDialect())
 
-trans = os.path.join(os.environ.get('SCHWAB_EXPORTS', SCHWAB_EXPORTS),
+trans = os.path.join(os.environ.get('SCHWAB_DD', SCHWAB_DD),
                      '*_Transactions_*.CSV')
-pos = os.path.join(os.environ.get('SCHWAB_EXPORTS', SCHWAB_EXPORTS),
+pos = os.path.join(os.environ.get('SCHWAB_DD', SCHWAB_DD),
                    '*_Positions_*.CSV')
 
 def files_handler(path):
@@ -46,3 +46,4 @@ def files_handler(path):
 
 files_handler(trans)
 files_handler(pos)
+
