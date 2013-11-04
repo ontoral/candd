@@ -12,6 +12,10 @@ from HTMLParser import HTMLParser
 URL_FORMAT = '%m%%2F%d%%2F%Y'
 DATE_FORMAT = '%m/%d/%Y'
 PC_FORMAT = '%m%d%y'
+SYMBOL_FILE = os.environ.get('SYMBOL_FILE',
+                             os.path.join('..', 'symbols.txt'))
+DOWNLOAD_DIR = os.environ.get('PRICE_DD',
+                              os.path.join('..', 'supplemental-prices'))
 
 
 tiaa_cref_dd = os.environ.get('TIAA_CREF_DD', os.getcwd())
@@ -23,6 +27,7 @@ csvfiles = {'cref3': os.path.join(tiaa_cref_dd, 'cref3.csv'),
             'crefilb': os.path.join(tiaa_cref_dd, 'crefilb.csv'), 
             'crefsoci': os.path.join(tiaa_cref_dd, 'crefsoci.csv'), 
             'crefstok': os.path.join(tiaa_cref_dd, 'crefstok.csv')} 
+
 
 class PriceParser(HTMLParser):
     tag = None
@@ -116,7 +121,7 @@ def write_quotes_file(quotes, filename, date_str):
         out.write('\n'.join(entries) + '\n')
 
 
-def download_date(symbols, dt, download_dir):
+def download_date(symbols, dt, download_dir, log=False):
     quotes = get_quotes(symbols, dt)
     date_str = dt.strftime(PC_FORMAT)
 
@@ -130,6 +135,9 @@ def download_date(symbols, dt, download_dir):
     print 'File: ' + filename
 
     write_quotes_file(quotes, filename, date_str)
+    if log:
+        with open(os.path.join(download_dir, 'date.log'), 'a') as f:
+            f.write(datetime.date.today() + '\n')
 
 
 def from_quick_date(quick_date):
@@ -153,11 +161,6 @@ def daterange(start_date, end_date=None):
 
 
 def main(args):
-    symbol_file = os.environ.get('SYMBOL_FILE',
-                                 os.path.join('..', 'symbols.txt'))
-    download_dir = os.environ.get('PRICE_DD',
-                                  os.path.join('..', 'supplemental-prices'))
-
     # Get date or date range
     if args.start_date is not None and args.end_date is not None:
         # Download a range
@@ -188,28 +191,28 @@ def main(args):
         end_date = None
 
     # Obtain symbols
-    if args.symbols is not None:
+    if args.symbols:
         symbols = args.symbols.split(',')
     else:
         # Symbols not provided, find them from a file
-        if args.symbol_file is not None:
+        if not args.daily or not args.symbol_file:
+            symbol_file = raw_input('   Symbol file ({symbol_file}): '.format(symbol_file=SYMBOL_FILE))
+        else:
             symbol_file = args.symbol_file
-        elif not args.daily:
-            symfile = raw_input('   Symbol file ({symbol_file}): '.format(**locals()))
-            symbol_file = symfile if len(symfile) else symbol_file
+        symbol_file = symbol_file or SYMBOL_FILE
         symbols = read_symbol_file(symbol_file)
 
     # Obtain download directory
-    if args.download_dir is not None:
+    if not args.daily and not args.download_dir:
+        download_dir = raw_input('   Download directory ({download_dir}): '.format(download_dir=DOWNLOAD_DIR))
+    else:
         download_dir = args.download_dir
-    elif not args.daily:
-        downdir = raw_input('   Download directory ({download_dir}): '.format(**locals()))
-        download_dir = downdir if len(downdir) else download_dir
+    download_dir = download_dir or DOWNLOAD_DIR
 
     for dt in daterange(start_date, end_date):
         if dt.weekday() >= 5:
             continue
-        download_date(symbols, dt, download_dir)
+        download_date(symbols, dt, download_dir, log=args.daily)
 
 
 if __name__ == '__main__':
