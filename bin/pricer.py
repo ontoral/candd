@@ -137,7 +137,7 @@ def download_date(symbols, dt, download_dir, log=False):
     write_quotes_file(quotes, filename, date_str)
     if log:
         with open(os.path.join(download_dir, 'date.log'), 'a') as f:
-            f.write(datetime.date.today() + '\n')
+            f.write(str(datetime.date.today()) + '\n')
 
 
 def from_quick_date(quick_date):
@@ -195,7 +195,7 @@ def main(args):
         symbols = args.symbols.split(',')
     else:
         # Symbols not provided, find them from a file
-        if not args.daily or not args.symbol_file:
+        if not args.daily and not args.symbol_file:
             symbol_file = raw_input('   Symbol file ({symbol_file}): '.format(symbol_file=SYMBOL_FILE))
         else:
             symbol_file = args.symbol_file
