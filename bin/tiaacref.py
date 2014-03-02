@@ -30,15 +30,16 @@ CONVERTERS = {'PRI': fidoconvert.convert_tiaa_cref_pri_file,
               'SEC': fidoconvert.convert_tiaa_cref_sec_file}
 
 
-def download_current_data():
-    """For automated daily download of TIAA-CREF data files.
+def tiaacref_login():
+    """Log a web browser into TIAA-CREF.
 
-    Create a software browser via mechanize, then fill and submit
-    the forms required to download the most current file posted on
-    the TC website."""
+    returns:
+        browser: a mechanize web browser
+
+    Create a software browser with mechanize, then login through
+    primary and secondary authentication at TIAA-CREF."""
 
     # Create browser and log in
-    print 'Attempting login...'
     browser = mechanize.Browser()
     browser.open(URL)
     browser.select_form(nr=0)
@@ -48,6 +49,19 @@ def download_current_data():
     browser['password'] = PASSWORD
     browser['securityQuestionAnswer'] = SQA
     browser.submit()
+
+    return browser
+
+
+def download_current_data():
+    """For automated daily download of TIAA-CREF data files.
+
+    Fill and submit the forms required to download the most current
+    file posted on the TC website."""
+
+    # Create browser and log in
+    print 'Attempting login...'
+    browser = tiaacref_login()
     print 'login successful!'
 
     # Navigate to Current Data file
@@ -60,26 +74,25 @@ def download_current_data():
     print 'download complete!'
 
     # Find filename in response info, or simulate
-    filename_re = re.compile('.*filename=(.*)')
     header = str(browser.response().info())
-    filename_match = filename_re.findall(header)
-    if filename_match:
-        filename = filename_match[0].strip()
+    match = re.search('.*filename=(.*\.zip)', header)
+    if match:
+        filename = match.group(1)
     else:
         # Same as TIAA-CREF format, with added --
         stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        filename = 'TIAA-CREF---{0}.zip'.format(stamp)
+        filename = 'TIAA-CREF-{0}.zip'.format(stamp)
 
     return browser.response().get_data(), filename
 
 
-def main(daily=False, source=None, destination=None):
+def main(daily=False, source=None, download_dir=None):
     # Use directories from environment vars if none are given
     if source is None:
         source = os.environ.get('DOWNLOADS', os.getcwd())
-    if destination is None:
-        destination = os.environ.get('TIAA_CREF_DD', os.getcwd())
-    archive_storage = os.path.join(destination, 'archives.zip')
+    if download_dir is None:
+        download_dir = os.environ.get('TIAA_CREF_DD', os.getcwd())
+    archive_storage = os.path.join(download_dir, 'archives.zip')
 
     # Daily download checks TC website, otherwise local directory is checked
     if daily:
@@ -105,10 +118,13 @@ def main(daily=False, source=None, destination=None):
             for name in zipped_data.namelist():
                 name = name.upper()
                 if extension_re.match(name):
+                    with open(os.path.join(download_dir, 'date.log'), 'a') as f:
+                        f.write('{}: {}\n'.format(str(datetime.today().date()),
+                                                  name))
                     # Use file extension to determine conversion
                     extension = name[-3:]
                     converter = CONVERTERS[extension]
-                    converter(os.path.join(destination, name), zipped_data.open(name))
+                    converter(os.path.join(download_dir, name), zipped_data.open(name))
 
         # Store archive in long-term storage and (attempt to) delete
         with ZipFile(archive_storage, 'a') as zipped_archive:
@@ -118,14 +134,16 @@ def main(daily=False, source=None, destination=None):
         except OSError:
             pass
 
+    return 0
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-a', '--daily', action='store_true', default=False,
                         help='perform automated download of current data')
-    parser.add_argument('source', nargs='?',
+    parser.add_argument('-s', '--source',
                         help='location of TIAA-CREF zip file(s)')
-    parser.add_argument('destination', nargs='?',
+    parser.add_argument('-d', '--destination',
                         help='location of extracted files')
     args = parser.parse_args()
 
