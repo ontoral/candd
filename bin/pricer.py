@@ -168,7 +168,7 @@ def main(args):
         end_date = from_quick_date(args.end_date) + datetime.timedelta(1)
     elif args.start_date is not None or args.end_date is not None:
         print 'Invalid date range specified'
-        return
+        return -1001
     else:
         # Download a single date as a 1-day range of dates
         if args.date is not None:
@@ -213,6 +213,8 @@ def main(args):
         if dt.weekday() >= 5:
             continue
         download_date(symbols, dt, download_dir, log=args.daily)
+
+    return 0
 
 
 if __name__ == '__main__':
