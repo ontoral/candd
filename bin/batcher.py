@@ -34,6 +34,7 @@ def download_missing_prices(data, download_dir, date_start=0, symbol_start=8,
     date = None
     symbols = set()
 
+    data.append('')
     for line in data:
         # If a pattern is provided, only use matching lines
         if pattern is not None:
