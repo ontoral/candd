@@ -104,13 +104,31 @@ def convert_tiaa_cref_pos_file(infile, file=None):
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def pos(values, outfile, **kwargs):
-        acct_num = values[0]
-        acct_type = values[1]
-        sec_type = values[2]
-        symbol = values[3]
-        quantity = values[4]
-        amount = values[5]
-        output = '\r\n'
+        acct_num = values[0][-6:] + values[0][:8]
+        sec_type = values[2] and 'mf'  # Mutual Funds only from TIAA-CREF
+        symbol = values[3].lower()
+        quantity = float(values[4])
+        amount = float(values[5])
+
+        # Other values
+        acct_type = 1  # Cash account
+        cusip = ''
+        trade_date_quantity = settle_date_quantity = quantity
+        close_price = ''  # >15.05f
+        description = ''
+        dts = os.path.basename(outfile)[2:8]
+        date_str = '20{}{}'.format(dts[-2:], dts[:-2])  # Convert MMDDYY to YYYYMMDD
+        factor = face_amount = clean_price = factored = ''
+        option_symbol = ''
+        rep1 = '000'  # Apparently C&D-specific values
+        rep2 = 'J62'  # Apparently C&D-specific values
+
+        # NOTE: Verify the need for closing_price, cusip, and description
+        output = ('{acct_num:14} {acct_type:1d} {cusip:9} {symbol:9} '
+                  '{trade_date_quantity:>15.05f} {settle_date_quantity:>15.05f} '
+                  '{close_price:15} {description:40} {date_str:8} '
+                  '{factor:17} {face_amount:18} {clean_price:18} {factored:1} '
+                  '{sec_type:2} {option_symbol:30} {rep1:3}{rep2:3}')
 
         return output.format(**locals())
 
@@ -309,11 +327,12 @@ def main():
     # The conversions, as available, by custodian
     custodians = {
         'tiaacref': {
+            'ini': Conversion('[aA][dD]*.[iI][nN][iI]', convert_tiaa_cref_ini_file, 'bai'),
+            'pos': Conversion('[aA][dD]*.[pP][oO][sS]', convert_tiaa_cref_pos_file, 'bas'),
             'pri': Conversion('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
             'sec': Conversion('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
-            'trn': Conversion('[aA][dD]*.[tT][rR][nN]', convert_tiaa_cref_trn_file, 'ban'),
             'trd': Conversion('[aA][dD]*.[tT][rR][dD]', convert_tiaa_cref_trd_file, 'bcd'),
-            'ini': Conversion('[aA][dD]*.[iI][nN][iI]', convert_tiaa_cref_ini_file, 'bai'),
+            'trn': Conversion('[aA][dD]*.[tT][rR][nN]', convert_tiaa_cref_trn_file, 'ban'),
         }
     }
 
@@ -324,7 +343,7 @@ def main():
     parser.add_argument('-c', '--custodian', choices=['tiaacref'], default='tiaacref',
                         help='abbreviation for data file(s) provider')
     parser.add_argument('-f', '--filetype', action='append',
-                        choices=['ini', 'pri', 'sec', 'trd', 'trn'],
+                        choices=['ini', 'pos', 'pri', 'sec', 'trd', 'trn'],
                         help='the extension of a filetype to convert')
     parser.add_argument('-s', '--skip-backup', action='store_true',
                         help='original files are not renamed after conversion')
