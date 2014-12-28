@@ -4,6 +4,7 @@ import os
 import datetime
 import glob
 import argparse
+from subprocess import call
 
 PC_DATE_FORMAT = '%m%d%y'
 
@@ -22,6 +23,7 @@ def convert_csv(infile, outfile, converter, file=None, mode='w'):
                 
     with open(outfile, mode) as dst:
         dst.write('\r\n'.join(output))
+    call(['chown', 'Administrators', outfile])
 
     return True
 
@@ -43,6 +45,7 @@ def convert_fixed(infile, outfile, fields, converter, file=None, mode='w'):
 
     with open(outfile, mode) as dst:
         dst.write('\r\n'.join(output))
+    call(['chown', 'Administrators', outfile])
 
     return True
 
