@@ -74,7 +74,7 @@ def convert_tiaa_cref_sec_file(infile, file=None):
         sec_type = 'MF'
         desc = values[2][0:40]
         cusip = values[21]
-        output = '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00\r\n'
+        output = '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00'
 
         return output.format(**locals())
 
@@ -89,7 +89,7 @@ def convert_tiaa_cref_pri_file(infile, file=None):
         symbol = values[0]
         price = float(values[3])
         pc_datestr = os.path.basename(outfile)[2:8]
-        output = '{symbol:58}{price:>15.07f}{pc_datestr}\r\n'
+        output = '{symbol:58}{price:>15.07f}{pc_datestr}'
 
         return output.format(**locals())
 
@@ -147,7 +147,7 @@ def convert_tiaa_cref_trd_file(infile, file=None):
         tacct_num = 'TC{}'.format(values[13][:8])
         acct_num11 = acct_num[:11]
 
-        output = '{acct_num11:11}{tacct_num:10} {full_name}\r\n'
+        output = '{acct_num11:11}{tacct_num:10} {full_name}'
 
         return output.format(**locals())
 
@@ -172,7 +172,7 @@ def convert_tiaa_cref_trd_file(infile, file=None):
 
         output = ('{acct_num:14} {tax_id:11}     {full_name:20}     '
                   '{tacct_num:10}     {acct_type:24}      {date_str:12} '
-                  '{cost_basis:4} {corp_indicator:1}\r\n')
+                  '{cost_basis:4} {corp_indicator:1}')
 
         return output.format(**locals())
 
@@ -232,7 +232,7 @@ def convert_tiaa_cref_trn_file(infile, file=None):
                   '{sec_type_code:2} {symbol:9} {net_amount:>15.02f} {source:7} '
                   '{quantity:>15.05f} {broker:7} {broker_fee:>9.02f} {tk_code:4} '
                   '{tkc_desc:21} {other_fee:>16.04f} {SEC_fee:>16.04f} '
-                  '{option_symbol:30} {settle_date:6} {order_action:20}\r\n')
+                  '{option_symbol:30} {settle_date:6} {order_action:20}')
 
         return output.format(**locals())
 
