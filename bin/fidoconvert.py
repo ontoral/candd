@@ -4,22 +4,31 @@ import os
 import datetime
 import glob
 import argparse
+import csv
 from subprocess import call
 
 PC_DATE_FORMAT = '%m%d%y'
 
 
-def convert_csv(infile, outfile, converter, file=None, mode='w'):
+def convert_csv(infile, outfile, converter, file=None, mode='w', headers=0):
     '''General purpose .CSV file conversion engine.'''
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
     with file or open(infile, 'r') as src:
-        output = []
-        for line in src:
-            # Get distinct values from line of input
-            values = line.split(',')
+        with open(outfile + '._sv', 'w') as unconverted:
+            csv_writer = csv.writer(unconverted)
+            output = []
+            csv_reader = csv.reader(src)
+            for values in csv_reader:
+                if headers or not values[0]:
+                    headers -= 1
+                    continue
 
-            output.append(converter(**locals()))
+                converted = converter(**locals())
+                if len(converted) == 0:
+                    csv_writer.writerow(values)
+                else:
+                    output.append(converted)
                 
     with open(outfile, mode) as dst:
         dst.write('\r\n'.join(output))
@@ -73,8 +82,8 @@ def convert_tiaa_cref_sec_file(infile, file=None):
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def sec(values, **kwargs):
-        symbol = values[0]
-        sec_type = 'MF'
+        symbol = 'tiaatrad-' if values[0].lower() == 'tiaatrad' else values[0].lower()
+        sec_type = 'mf'
         desc = values[2][0:40]
         cusip = values[21]
         output = '{sec_type}{symbol:9}{desc:40}{cusip:>9}  0.00'
@@ -89,7 +98,7 @@ def convert_tiaa_cref_pri_file(infile, file=None):
     outfile = get_fidelity_path_from_tiaa_cref(infile)
 
     def pri(values, outfile, **kwargs):
-        symbol = values[0]
+        symbol = 'tiaatrad-' if values[0].lower() == 'tiaatrad' else values[0].lower()
         price = float(values[3])
         pc_datestr = os.path.basename(outfile)[2:8]
         output = '{symbol:58}{price:>15.07f}{pc_datestr}'
@@ -105,8 +114,8 @@ def convert_tiaa_cref_pos_file(infile, file=None):
 
     def pos(values, outfile, **kwargs):
         acct_num = values[0][-6:] + values[0][:8]
-        sec_type = values[2] and 'mf'  # Mutual Funds only from TIAA-CREF
-        symbol = values[3].lower()
+        sec_type = '' #values[2] and 'mf'  # Mutual Funds only from TIAA-CREF
+        symbol = 'tiaatrad-' if values[3].lower() == 'tiaatrad' else values[3].lower()
         quantity = float(values[4])
         amount = float(values[5])
 
@@ -215,13 +224,25 @@ def convert_tiaa_cref_trn_file(infile, file=None):
         # TC Acct#: 'AAAAAAAA BBBBBB CCCCCC' -> PC Acct#: 'AAAAAAAACCCCCC'
         acct_num = values[2][-6:] + values[2][:8]
         trans_code = {'BUY': 'by',
+                      'SECBUY': 'dv',
                       'DEP': 'dp',
                       'DIV': 'dv',
                       'INT': 'in',
                       'SELL': 'sl',
                       'WITH': 'wd'}[values[3]]
+        symbol = 'tiaatrad-' if values[5].lower() == 'tiaatrad' else values[5].lower()
+        if values[3] == 'INT':
+            source = 'tiaatra'
+        #elif values[3] == 'SECBUY':
+            #source = values[5].lower()[:7]
+        elif values[3] in ['DEP', 'WITH']:
+            source = 'cash'
+            symbol = 'cash'
+        elif values[3] in ['BUY', 'SELL']:
+            source = 'cash'
+        else:
+            source = 'client'
         cancel = values[4]
-        symbol = values[5].lower()
         sec_code = values[6]
         trade_date = values[7][:4] + values[7][-2:]  # Convert from MMDDYYYY
         quantity = float(values[8])
@@ -236,14 +257,13 @@ def convert_tiaa_cref_trn_file(infile, file=None):
         comment = values[17]
         
         # Other values
-        sec_type_code = 'mf'
+        sec_type_code = '' #'mf'
         tk_code, tkc_desc = {'by': ('BOT', 'BOUGHT'),
-                             'dp': ('DDP', 'DIRECT DEPOSIT'),
+                             'dp': ('REC', 'RECEIVED FROM YOU'),
                              'dv': ('DIV', 'DIVIDEND'),
                              'in': ('INT', 'INTEREST'),
                              'sl': ('SLD', 'SOLD'),
-                             'wd': ('ICP', 'CHECK PAID')}[trans_code]
-        source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+                             'wd': ('DEL', 'DELIVERED TO YOU')}[trans_code]
         if cancel == 'Y':
             trans_code = trans_code.upper()
         SEC_fee = 0.0
@@ -270,14 +290,14 @@ def convert_tiaa_cref_ini_file(infile, file=None):
         acct_num = values[2][-6:] + values[2][:8]
         trans_code = values[3] and 'by'
         # cancel = values[4]            # Not sent by TIAA-CREF
-        symbol = values[5].lower()
+        symbol = 'tiaatrad-' if values[5].lower() == 'tiaatrad' else values[5].lower()
         sec_code = values[6]
         trade_date = values[7][:4] + values[7][-2:]  # Convert MMDDYYYY to MMDDYY
         quantity = float(values[8])
         net_amount = float(values[9]) and 0.0
 
         # Other values
-        sec_type_code = 'mf'
+        sec_type_code = '' #'mf'
         source = 'xxxxxxx'
         broker_fee = other_fee = SEC_fee = 0.0
         tk_code = 'TFR'
@@ -303,6 +323,288 @@ def convert_tiaa_cref_ini_file(infile, file=None):
     return convert_csv(infile, outfile, ini, file, mode=mode)
 
 
+def convert_schwab_pos_file(infile, file=None):
+    '''Convert Positions export (.CSV) from Schwab to Fidelity format.'''
+    stamp = infile.split('_')[-1]
+    stamp = stamp.split('.')[0]
+    with open(infile) as csv:
+        acct_num = csv.readline().split()[4]
+    acct_num = acct_num.replace('XXXX', os.path.basename(infile)[:4])
+    outfile = 'fi' + acct_num + '_' + stamp + '.pos'
+
+    def pos(values, outfile, acct_num=acct_num, **kwargs):
+        symbol = values[0]
+        description = values[1][:40]
+        quantity = float(values[2])
+        # values[3] == price
+        # values[4] == price change $
+        # values[5] == price change %
+        # values[6] == market value
+        # values[7] == day change $
+        # values[8] == day change %
+        # values[9] == Cost Basis
+        # values[10] == Gain/Loss $
+        # values[11] == Gain/Loss %
+        # values[12] == Reinvest Dividends?
+        # values[13] == Capital Gains?
+        # values[14] == % Of Account
+        # values[15] == Security Type
+#"SPY","S P D R S&P 500 ETF TR EXPIRES 01/22/2118","117","$204.50","-$0.48","-0.23%","$23,926.50","-$56.16","-0.23%","$17,508.94","$6,417.56","+36.65%","No","--","62.16%","ETFs & Closed End Funds",
+#"BUFBX","BUFFALO FLEXIBLE INCOME FUND","961.733","$14.32","-$0.02","-0.14%","$13,772.02","-$19.23","-0.14%","$12,600.00","$1,172.02","+9.3%","No","No","35.78%","Mutual Fund",
+#"Cash & Money Market","--","--","--","--","--","$796.11","$0.00","0%","--","--","--","--","--","2.07%","Cash and Money Market",
+#"Account Total","--","--","--","--","--","$38,494.63","-$75.39","-0.2%","$30,108.94","$7,589.58","+25.21%","--","--","--","--",
+        sec_type = '' #values[2] and 'mf'  # Mutual Funds only from TIAA-CREF
+        symbol = values[3].lower()
+        quantity = float(values[4])
+        amount = float(values[5])
+
+        # Other values
+        acct_type = 1  # Cash account
+        cusip = ''
+        trade_date_quantity = settle_date_quantity = quantity
+        close_price = ''  # >15.05f
+        dts = os.path.basename(outfile)[2:8]
+        date_str = '20{}{}'.format(dts[-2:], dts[:-2])  # Convert MMDDYY to YYYYMMDD
+        factor = face_amount = clean_price = factored = ''
+        option_symbol = ''
+        rep1 = '000'  # Apparently C&D-specific values
+        rep2 = 'J62'  # Apparently C&D-specific values
+
+        # NOTE: Verify the need for closing_price, cusip, and description
+        output = ('{acct_num:14} {acct_type:1d} {cusip:9} {symbol:9} '
+                  '{trade_date_quantity:>15.05f} {settle_date_quantity:>15.05f} '
+                  '{close_price:15} {description:40} {date_str:8} '
+                  '{factor:17} {face_amount:18} {clean_price:18} {factored:1} '
+                  '{sec_type:2} {option_symbol:30} {rep1:3}{rep2:3}')
+
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, pos, file, mode='a', headers=3)
+
+
+def convert_schwab_trn_file(infile, file=None):
+    '''Convert Transactions export (.CSV) from Schwab to Fidelity format.'''
+    stamp = infile.split('_')[-1]
+    stamp = stamp.split('.')[0]
+    with open(infile) as csv:
+        acct_num = csv.readline().split()[4]
+    acct_num = acct_num.replace('XXXX', os.path.basename(infile)[:4])
+    outfile = 'fi' + acct_num + '_' + stamp + '.trn'
+
+    def trn(values, outfile, acct_num=acct_num, **kwargs):
+        settle_date = values[0][:2] + values[0][3:5] + values[0][8:10]
+        if len(values[0]) < 20:
+            trade_date = settle_date
+        else:
+            trade_date = values[0][17:19] + values[0][20:22] + values[0][25:27]
+        trans_code = {'Buy': 'by',
+                      'Sell': 'sl',
+                      'Principal Payment': 'rc',
+                      'Bond Interest': 'in',
+                      'CD Interest': 'in',
+                      'Tax Withholding': 'pn',
+                      'Stock Split': 'sp',
+                      'Pr Yr Cash Div': 'dv',
+                      'Qualified Dividend': 'dv',
+                      'Cash Dividend': 'dv'}.get(values[1].strip(), '')
+        if trans_code == '':
+            return ''
+        symbol = values[2].lower().strip()
+        # values[3] == security description
+        quantity = float(values[4].strip() or '0')
+        # values[5] == price
+        broker_fee = float(values[6].replace('$', '').replace('*', '') or '0')
+        net_amount = abs(float(values[7].replace('$', '').strip() 
+                         or values[4]
+                         or '0'))
+
+        # Other values
+        broker = 'SCHW'
+        sec_type_code = ''
+        #source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+        source = 'cash'
+        tk_code, tkc_desc = {'by': ('BOT', 'BOUGHT'),
+                             'sl': ('SLD', 'SOLD'),
+                             'rc': ('PRN', 'PRINCIPAL PAYMENT'),
+                             'in': ('INT', 'INTEREST'),
+                             'pn': ( 'PN', 'TAX W/H'),
+                             'sp': ('DST', 'DISTRIBUTION'),
+                             'dv': ('DIV', 'DIVIDEND')}[trans_code]
+        if trans_code == 'pn':
+            prefix = 'FED' if values[3][:3] == 'FED' else 'STATE'
+            tk_code = prefix[0] + tk_code
+            tkc_desc = prefix + ' ' + tkc_desc
+            trans_code = 'wd'
+            symbol = 'cash'
+            source = 'xxxxxxx'
+        elif trans_code == 'sp':
+            trans_code = 'by'
+        other_fee = 0.0
+        SEC_fee = 0.0
+        option_symbol = ''
+        order_action = ''
+        output = ('{acct_num:14}{trans_code:2} {trade_date:6} '
+                  '{sec_type_code:2} {symbol:9} {net_amount:>15.02f} {source:7} '
+                  '{quantity:>15.05f} {broker:7} {broker_fee:>9.02f} {tk_code:4} '
+                  '{tkc_desc:21} {other_fee:>16.04f} {SEC_fee:>16.04f} '
+                  '{option_symbol:30} {settle_date:6} {order_action:20}')
+
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, trn, file, mode='a', headers=2)
+
+
+def convert_fidelity_hist_file(infile, file=None):
+    '''Convert History export (.CSV) from Fidelity to Fidelity format.'''
+    # infile name: AccountHistoryForXXX-XXXXXX
+    # outfile = infile[:-3] + 'trn'
+    outfile = 'converted.trn'
+    acct_num = infile.split('AccountHistoryFor')[1][:10]
+
+    def trn(values, outfile, acct_num=acct_num, **kwargs):
+        # values[0] == entry date
+        months = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                  'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                  'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'}
+        trade_date = months[values[1][3:6]] + values[1][:2] + values[1][9:11]
+        settle_date = months[values[2][3:6]] + values[2][:2] + values[2][9:11]
+        trans_code = {'Buy': 'by',
+                      'Sell': 'sl',
+                      'Withdrawal': 'wd',
+                      'Deposit': 'dp',
+                      'Fee': 'dp',
+                      'Interest': 'in',
+                      'Dividend': 'dv',}.get(values[3].strip(), '')
+        if trans_code == '':
+            return ''
+        # values[4] == transaction description
+        symbol = values[5].lower().strip().split(' ')[0].replace('--', '')
+        # values[6] == security description
+        quantity = abs(float(values[7].strip().replace(',', '') or '0'))
+        # values[8] == foreign quantity
+        # values[9] == price
+        # values[10] == currency
+        # values[11] == foreign price
+        # values[12] == currency
+        net_amount = abs(float(values[13].replace('$', '').replace(',', '') or '0'))
+        # values[14] == currency
+        # values[15] == foreign net amount
+        # values[16] == currency
+        # values[17] == account type
+        values[18] = '0' if values[18] == '--' else values[18].replace('$', '').replace(',', '')
+        broker_fee = abs(float(values[18]))
+        # values[19] == currency
+        # values[20] == foreign commission
+        # values[21] == currency
+        tk_code = values[22]
+
+        # Other values
+        tkc_desc = {'BOT': 'BOUGHT',
+                    'BUY': 'BOUGHT',
+                    'SLD': 'SOLD',
+                    'SEL': 'SOLD',
+                    'JNL': 'JOURNAL',
+                    'ADF': 'ADVISOR FEE',
+                    'INT': 'INTEREST',
+                    'DST': 'DISTRIBUTION',
+                    'RDM': 'REDEEMED',
+                    'PDP': 'NORMAL DISTR PARTIAL',
+                    'ETT': 'MONEY LINE PAID EFT',
+                    'FPN': 'FED TAX W/H',
+                    'SPN': 'STATE TAX W/H',
+                    'RIN': 'REINVESTMENT',
+                    'DIV': 'DIVIDEND',}[tk_code]
+        broker = ''
+        sec_type_code = ''
+        source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+        other_fee = 0.0
+        SEC_fee = 0.0
+        option_symbol = ''
+        order_action = ''
+        output = ('{acct_num:14}{trans_code:2} {trade_date:6} '
+                  '{sec_type_code:2} {symbol:9} {net_amount:>15.02f} {source:7} '
+                  '{quantity:>15.05f} {broker:7} {broker_fee:>9.02f} {tk_code:4} '
+                  '{tkc_desc:21} {other_fee:>16.04f} {SEC_fee:>16.04f} '
+                  '{option_symbol:30} {settle_date:6} {order_action:20}')
+
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, trn, file, mode='a', headers=5)
+
+
+def convert_plandestination_file(infile, file=None):
+    '''Convert PlanDestination Transaction export (.CSV) to Fidelity format.'''
+    # infile name: download_03042015.csv
+    # outfile1 = fi030415.trn
+    # outfile2 = fi030415.pos
+    date = infile.split('_')[-1].split('.')[0]
+    filename = 'fi' + date[:4] + date[6:]
+    outfile1 = filename + '.trn'
+    outfile2 = filename + '.pos'
+    acct_num = '000000000'
+
+    def trn(values, outfile=outfile1, acct_num=acct_num, **kwargs):
+        trade_date = '{0:0>2}{1:0>2}{2[2]}{2[3]}'.format(*values[0].split('/'))
+        #settle_date = trade_date
+        trans_code = 'by' if values[1] == 'BUY' else 'sl'
+        # values[2] == source
+        symbol = values[3].lower()
+        # values[4] == cusip
+        # values[6] == investment (security description)
+        quantity =  float(values[7])
+        # values[8] == price
+        net_amount = abs(float(values[9][1:]))
+        # values[10] == activity
+        {'ASSET ALLOCATION': 'BOT|SLD',
+         'Corporate Fund Merger Adj': '',
+         'EMPLOYEE PRE-TAX CONTRIBUTION': '',
+         'EMPLOYER MATCHING CONTRIBUTION': '',
+         'INCOME ADJUSTMENT': '',
+         'PURCHASE DUE TO FUND SWAP': '',
+         'PURCHASE DUE TO FUND TRANSFER': '',
+         'REINVESTED DIVIDEND': 'DIV->RIN',
+         'SALE DUE TO FUND SWAP': '',
+         'SALE DUE TO FUND TRANSFER': '',
+         'TRANSFER TO PERMANENT INVESTMENT': 'REC',}
+
+        #if trans_code == '':
+            #return ''
+
+        # Other values
+        sec_type_code = ''
+        source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+        broker = ''
+        tk_code = values[22]
+        tkc_desc = {'BOT': 'BOUGHT',
+                    'BUY': 'BOUGHT',
+                    'SLD': 'SOLD',
+                    'SEL': 'SOLD',
+                    'JNL': 'JOURNAL',
+                    'ADF': 'ADVISOR FEE',
+                    'INT': 'INTEREST',
+                    'DST': 'DISTRIBUTION',
+                    'RDM': 'REDEEMED',
+                    'PDP': 'NORMAL DISTR PARTIAL',
+                    'ETT': 'MONEY LINE PAID EFT',
+                    'FPN': 'FED TAX W/H',
+                    'SPN': 'STATE TAX W/H',
+                    'RIN': 'REINVESTMENT',
+                    'DIV': 'DIVIDEND',}[tk_code]
+        other_fee = 0.0
+        SEC_fee = 0.0
+        option_symbol = ''
+        order_action = ''
+        output = ('{acct_num:14}{trans_code:2} {trade_date:6} '
+                  '{sec_type_code:2} {symbol:9} {net_amount:>15.02f} {source:7} '
+                  '{quantity:>15.05f} {broker:7} {broker_fee:>9.02f} {tk_code:4} '
+                  '{tkc_desc:21} {other_fee:>16.04f} {SEC_fee:>16.04f} '
+                  '{option_symbol:30} {settle_date:6} {order_action:20}')
+
+        return output.format(**locals())
+
+    return convert_csv(infile, outfile, trn, file, mode='a', headers=5)
+
+
 def main():
     '''convert downloaded data files to Fidelity format'''
 
@@ -314,8 +616,9 @@ def main():
             self.backup_extension = backup_extension
 
         def convert_path(self, path, skip_backup=False):
-            print 'Matching ' + self.glob_pattern
-            filenames = glob.iglob(os.path.join(path, self.glob_pattern))
+            glob_pattern = os.path.join(path, self.glob_pattern)
+            print 'Matching ' + glob_pattern
+            filenames = glob.iglob(glob_pattern)
             if not skip_backup:
                 print '\t', 'Backing up files to *.{0}'.format(self.backup_extension)
             for filename in filenames:
@@ -332,22 +635,39 @@ def main():
             'pri': Conversion('[aA][dD]*.[pP][rR][iI]', convert_tiaa_cref_pri_file, 'bap'),
             'sec': Conversion('[aA][dD]*.[sS][eE][cC]', convert_tiaa_cref_sec_file, 'bac'),
             'trd': Conversion('[aA][dD]*.[tT][rR][dD]', convert_tiaa_cref_trd_file, 'bcd'),
-            'trn': Conversion('[aA][dD]*.[tT][rR][nN]', convert_tiaa_cref_trn_file, 'ban'),
-        }
+            'trn': Conversion('[aA][dD]*.[tT][rR][nN]', convert_tiaa_cref_trn_file, 'bak'),
+        },
+        'schwab': {
+            'pos': Conversion('*Positions*.[cC][sS][vV]', convert_schwab_pos_file, 'bsv'),
+            'trn': Conversion('*Transactions*.[cC][sS][vV]', convert_schwab_trn_file, 'bsv'),
+        },
+        'fidelity': {
+            'hist': Conversion('AccountHistoryFor*.csv', convert_fidelity_hist_file, 'bak'),
+        },
     }
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('path', nargs='?',
                         help='folder where data files are stored and converted',
                         default=os.environ.get('TIAA_CREF_DD', os.getcwd()))
-    parser.add_argument('-c', '--custodian', choices=['tiaacref'], default='tiaacref',
+    parser.add_argument('-c', '--custodian', choices=custodians.keys(),
+                        default='tiaacref',
                         help='abbreviation for data file(s) provider')
     parser.add_argument('-f', '--filetype', action='append',
                         choices=['ini', 'pos', 'pri', 'sec', 'trd', 'trn'],
                         help='the extension of a filetype to convert')
     parser.add_argument('-s', '--skip-backup', action='store_true',
                         help='original files are not renamed after conversion')
+    parser.add_argument('-d', '--history-download', nargs=1, type=file,
+                        help='convert a history file downloaded from Fidelity')
     args = parser.parse_args()
+
+    # Convert a history .csv from Fidelity website export
+    if args.history_download:
+        print args.history_download
+        print args
+#history.convert_file(args.history_download[0])
+        return
 
     # Get the conversions from the chosen custodian
     conversions = custodians[args.custodian]

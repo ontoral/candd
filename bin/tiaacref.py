@@ -25,9 +25,13 @@ PASSWORD = os.environ.get('TIAA_CREF_PASSWORD', 'password')
 SQA = os.environ.get('TIAA_CREF_SQA', 'sqa')
 
 # Match and convert supported file types
-EXTENSION_RE = '.*SEC$|.*PRI$'
-CONVERTERS = {'PRI': fidoconvert.convert_tiaa_cref_pri_file,
-              'SEC': fidoconvert.convert_tiaa_cref_sec_file}
+EXTENSION_RE = '.*INI$|.*SEC$|.*PRI$|.*TRD$|.*TRN$|.*POS$'
+CONVERTERS = {'INI': fidoconvert.convert_tiaa_cref_ini_file,
+              'SEC': fidoconvert.convert_tiaa_cref_sec_file,
+              'PRI': fidoconvert.convert_tiaa_cref_pri_file,
+              'TRD': fidoconvert.convert_tiaa_cref_trd_file,
+              'TRN': fidoconvert.convert_tiaa_cref_trn_file,
+              'POS': fidoconvert.convert_tiaa_cref_pos_file}
 
 
 def tiaacref_login():
