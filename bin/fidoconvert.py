@@ -404,6 +404,13 @@ def convert_schwab_trn_file(infile, file=None):
                       'CD Interest': 'in',
                       'Tax Withholding': 'pn',
                       'Stock Split': 'sp',
+                      'Funds Paid': 'wd',
+                      'Auto S1 Debit': 'wd',
+                      'Visa Purchase': 'wd',
+                      'ATM Withdrawal': 'wd',
+                      'Funds Received': 'dp',
+                      'Auto S1 Credit': 'dp',
+                      'Schwab ATM Rebate': 'dp',
                       'Pr Yr Cash Div': 'dv',
                       'Qualified Dividend': 'dv',
                       'Cash Dividend': 'dv'}.get(values[1].strip(), '')
@@ -421,14 +428,16 @@ def convert_schwab_trn_file(infile, file=None):
         # Other values
         broker = 'SCHW'
         sec_type_code = ''
-        #source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
-        source = 'cash'
+        source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+        #source = 'cash'
         tk_code, tkc_desc = {'by': ('BOT', 'BOUGHT'),
                              'sl': ('SLD', 'SOLD'),
                              'rc': ('PRN', 'PRINCIPAL PAYMENT'),
                              'in': ('INT', 'INTEREST'),
                              'pn': ( 'PN', 'TAX W/H'),
                              'sp': ('DST', 'DISTRIBUTION'),
+                             'wd': ('DEL', 'DELIVERED TO YOU'),
+                             'dp': ('REC', 'RECEIVED FROM YOU'),
                              'dv': ('DIV', 'DIVIDEND')}[trans_code]
         if trans_code == 'pn':
             prefix = 'FED' if values[3][:3] == 'FED' else 'STATE'
@@ -439,6 +448,9 @@ def convert_schwab_trn_file(infile, file=None):
             source = 'xxxxxxx'
         elif trans_code == 'sp':
             trans_code = 'by'
+        elif trans_code in ['wd', 'dp']:
+            sec_type_code = 'ca'
+            tkc_desc = values[3][:21]
         other_fee = 0.0
         SEC_fee = 0.0
         option_symbol = ''
