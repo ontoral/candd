@@ -229,9 +229,9 @@ if __name__ == '__main__':
                         help='last date to download from a range of dates')
     parser.add_argument('-y', '--symbols',
                         help='comma separated list of symbols to download')
-    parser.add_argument('-f', '--symbol-file',
+    parser.add_argument('-f', '--symbol-file', default=SYMBOL_FILE,
                         help='file containing a list of symbols (absolute)')
-    parser.add_argument('-p', '--download-dir',
+    parser.add_argument('-p', '--download-dir', default=DOWNLOAD_DIR,
                         help='path to download location (absolute)')
 
     main(parser.parse_args())
