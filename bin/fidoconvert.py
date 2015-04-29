@@ -235,13 +235,19 @@ def convert_tiaa_cref_trn_file(infile, file=None):
                       'DIV': 'dv',
                       'INT': 'in',
                       'SELL': 'sl',
-                      'WITH': 'wd'}[values[3]]
+                      'WITH': 'wd',
+                      'MFEE': 'wd'}.get(values[3], '')
+        if trans_code == '':
+            return ''
         symbol = 'tiaatrad-' if values[5].lower() == 'tiaatrad' else values[5].lower()
         if values[3] == 'INT':
             source = 'tiaatra'
         #elif values[3] == 'SECBUY':
             #source = values[5].lower()[:7]
-        elif values[3] in ['DEP', 'WITH']:
+        elif values[3] in ['WITH', 'MFEE']:
+            source = 'client'
+            symbol = 'cash'
+        elif values[3] in ['DEP']:
             source = 'cash'
             symbol = 'cash'
         elif values[3] in ['BUY', 'SELL']:
@@ -270,6 +276,8 @@ def convert_tiaa_cref_trn_file(infile, file=None):
                              'in': ('INT', 'INTEREST'),
                              'sl': ('SLD', 'SOLD'),
                              'wd': ('DEL', 'DELIVERED TO YOU')}[trans_code]
+        if values[3] == 'MFEE':
+            tk_code, tkc_desc = 'ADF', 'ADVISOR FEE'
         if cancel == 'Y':
             trans_code = trans_code.upper()
         SEC_fee = 0.0
