@@ -15,24 +15,30 @@ def convert_csv(infile, outfile, converter, file=None, mode='w', headers=0):
     # Convert data
     print '{infile}  -->  {outfile}'.format(**locals())
     with file or open(infile, 'r') as src:
-        with open(outfile + '._sv', 'w') as unconverted:
-            csv_writer = csv.writer(unconverted)
-            output = []
-            csv_reader = csv.reader(src)
-            for values in csv_reader:
-                if headers or not values[0]:
-                    headers -= 1
-                    continue
+        output = []
+        unconverted = []
+        csv_reader = csv.reader(src)
+        for values in csv_reader:
+            if headers or not values[0]:
+                headers -= 1
+                continue
 
-                converted = converter(**locals())
-                if len(converted) == 0:
-                    csv_writer.writerow(values)
-                else:
-                    output.append(converted)
+            converted = converter(**locals())
+            if len(converted) == 0:
+                unconverted.append(values)
+            else:
+                output.append(converted)
                 
-    with open(outfile, mode) as dst:
-        dst.write('\r\n'.join(output))
-    call(['chown', 'Administrators', outfile])
+    if len(output):
+        with open(outfile, mode) as dst:
+            dst.write('\r\n'.join(output))
+        call(['chown', 'Administrators', outfile])
+    if len(unconverted):
+        print '\tunconverted rows in {infile}.err'.format(**locals())
+        with open(infile + '.err', 'w') as errors:
+            csv_writer = csv.writer(errors)
+            csv_writer.writerows(unconverted)
+        call(['chown', 'Administrators', infile + '.err'])
 
     return True
 
