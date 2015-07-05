@@ -19,13 +19,16 @@ def convert_csv(infile, outfile, converter, file=None, mode='w', headers=0):
         unconverted = []
         csv_reader = csv.reader(src)
         for values in csv_reader:
+            #print '1', headers, values
             if headers or not values[0]:
                 headers -= 1
                 continue
 
+            #print 'past'
             converted = converter(**locals())
             if len(converted) == 0:
-                unconverted.append(values)
+                if len(values[0]):
+                    unconverted.append(values)
             else:
                 output.append(converted)
                 
@@ -398,61 +401,66 @@ def convert_schwab_pos_file(infile, file=None):
 
 def convert_schwab_trn_file(infile, file=None):
     '''Convert Transactions export (.CSV) from Schwab to Fidelity format.'''
-    stamp = infile.split('_')[-1]
-    stamp = stamp.split('.')[0]
-    with open(infile) as csv:
-        acct_num = csv.readline().split()[4]
-    acct_num = acct_num.replace('XXXX', os.path.basename(infile)[:4])
-    outfile = 'fi' + acct_num + '_' + stamp + '.trn'
+#    with open(infile) as csv:
+#        acct_num = csv.readline().split()[4]
+#    acct_num = acct_num.replace('XXXX', os.path.basename(infile)[:4])
+    outfile = 'fi' + os.path.basename(infile)[2:12]
 
-    def trn(values, outfile, acct_num=acct_num, **kwargs):
+    def trn(values, outfile, **kwargs):
+        #print values
         settle_date = values[0][:2] + values[0][3:5] + values[0][8:10]
         if len(values[0]) < 20:
             trade_date = settle_date
         else:
             trade_date = values[0][17:19] + values[0][20:22] + values[0][25:27]
-        trans_code = {'Buy': 'by',
-                      'Sell': 'sl',
-                      'Principal Payment': 'rc',
-                      'Bond Interest': 'in',
-                      'CD Interest': 'in',
-                      'Tax Withholding': 'pn',
-                      'Stock Split': 'sp',
-                      'Funds Paid': 'wd',
-                      'Auto S1 Debit': 'wd',
-                      'Visa Purchase': 'wd',
-                      'ATM Withdrawal': 'wd',
-                      'Funds Received': 'dp',
-                      'Auto S1 Credit': 'dp',
-                      'Schwab ATM Rebate': 'dp',
-                      'Pr Yr Cash Div': 'dv',
-                      'Qualified Dividend': 'dv',
-                      'Cash Dividend': 'dv'}.get(values[1].strip(), '')
+        table = {'Buy': ('by', 'BOT', 'BOUGHT', 'cash'),
+                 'Reinvest Shares': ('by', 'RIN', 'REINVESTMENT', 'cash'),
+                 'Sell': ('sl', 'SLD', 'SOLD', 'cash'),
+                 'CD Deposit Adj': ('cd', 'RDM', 'REDEEMED', 'cash'),
+                 'CD Deposit Funds': ('skip', '', '', ''),
+                 'Security Transfer': ('st', 'TFR', 'TRANSFERRED', 'cash'),
+                 'Principal Payment': ('rc', 'PRN', 'PRINCIPAL PAYMENT', 'cash'),
+                 'Bond Interest': ('in', 'INT', 'INTEREST', 'cash'),
+                 'Bank Interest': ('in', 'INT', 'INTEREST', 'cash'),
+                 'CD Interest': ('in', 'INT', 'INTEREST', 'cash'),
+                 'Tax Withholding': ('pn', 'PN', 'TAX W/H', 'cash'),
+                 'Stock Split': ('by', 'DST', 'DISTRIBUTION', 'cash'),
+                 'Advisor Fee': ('wd', 'ADF', 'ADVISOR FEE', 'client'),
+                 'Funds Paid': ('wd', 'DEL', 'DELIVERED TO YOU', 'client'),
+                 'Auto S1 Debit': ('wd', 'DEL', 'DELIVERED TO YOU', 'client'),
+                 'Visa Purchase': ('wd', 'DEL', 'DELIVERED TO YOU', 'client'),
+                 'ATM Withdrawal': ('wd', 'DEL', 'DELIVERED TO YOU', 'client'),
+                 'Funds Received': ('dp', 'REC', 'RECEIVED FROM YOU', 'client'),
+                 'Auto S1 Credit': ('dp', 'REC', 'RECEIVED FROM YOU', 'client'),
+                 'Schwab ATM Rebate': ('dp', 'REC', 'RECEIVED FROM YOU', 'client'),
+                 'Pr Yr Cash Div': ('dv', 'DIV', 'DIVIDEND', 'cash'),
+                 'Qualified Dividend': ('dv', 'DIV', 'DIVIDEND', 'cash'),
+                 'Reinvest Dividend': ('rdv', 'DIV', 'DIVIDEND', 'dvwash'),
+                 'Reinvest Shares': ('rby', 'RIN', 'REINVESTMENT', 'dvsplit'),
+                 'Cash Dividend': ('dv', 'DIV', 'DIVIDEND', 'cash')}
+        trans_code, tk_code, tkc_desc, source = table.get(values[1].strip(), ('', '', '', ''))
         if trans_code == '':
+            return ''
+        if trans_code == 'skip':
+            values[0] = ''
             return ''
         symbol = values[2].lower().strip()
         # values[3] == security description
-        quantity = float(values[4].strip() or '0')
+        quantity = abs(float(values[4].strip() or '0'))
         # values[5] == price
+        # price = float(values[5].replace('$', '') or '0')
         broker_fee = float(values[6].replace('$', '').replace('*', '') or '0')
         net_amount = abs(float(values[7].replace('$', '').strip() 
-                         or values[4]
-                         or '0'))
+                               or values[4]
+                               or '0'))
+        acct_num = values[9].strip()
 
         # Other values
         broker = 'SCHW'
         sec_type_code = ''
-        source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
-        #source = 'cash'
-        tk_code, tkc_desc = {'by': ('BOT', 'BOUGHT'),
-                             'sl': ('SLD', 'SOLD'),
-                             'rc': ('PRN', 'PRINCIPAL PAYMENT'),
-                             'in': ('INT', 'INTEREST'),
-                             'pn': ( 'PN', 'TAX W/H'),
-                             'sp': ('DST', 'DISTRIBUTION'),
-                             'wd': ('DEL', 'DELIVERED TO YOU'),
-                             'dp': ('REC', 'RECEIVED FROM YOU'),
-                             'dv': ('DIV', 'DIVIDEND')}[trans_code]
+        # source = 'client' if trans_code in ['dp', 'wd'] else 'cash'
+
+        # Non-trivial transactions
         if trans_code == 'pn':
             prefix = 'FED' if values[3][:3] == 'FED' else 'STATE'
             tk_code = prefix[0] + tk_code
@@ -460,11 +468,30 @@ def convert_schwab_trn_file(infile, file=None):
             trans_code = 'wd'
             symbol = 'cash'
             source = 'xxxxxxx'
-        elif trans_code == 'sp':
-            trans_code = 'by'
         elif trans_code in ['wd', 'dp']:
             sec_type_code = 'ca'
             tkc_desc = values[3][:21]
+        elif trans_code == 'st':
+            if symbol == 'no number':
+                symbol = 'cash'
+                if values[7].strip()[:1] == '-':
+                    trans_code = 'wd'
+                else:
+                    trans_code = 'dp'
+                source = 'xxxxxxx'
+            else:
+                trans_code = 'sl'
+                net_amount = 0
+        elif trans_code == 'rdv':
+            trans_code = 'dv'
+            quantity = 1
+            broker = ''
+        elif trans_code == 'rby':
+            trans_code = 'by'
+        elif trans_code == 'cd':
+            trans_code = 'sl'
+            net_amount = quantity
+
         other_fee = 0.0
         SEC_fee = 0.0
         option_symbol = ''
@@ -477,7 +504,7 @@ def convert_schwab_trn_file(infile, file=None):
 
         return output.format(**locals())
 
-    return convert_csv(infile, outfile, trn, file, mode='a', headers=2)
+    return convert_csv(infile, outfile, trn, file, mode='a')
 
 
 def convert_fidelity_hist_file(infile, file=None):
@@ -664,8 +691,8 @@ def main():
             'trn': Conversion('[aA][dD]*.[tT][rR][nN]', convert_tiaa_cref_trn_file, 'bak'),
         },
         'schwab': {
-            'pos': Conversion('*Positions*.[cC][sS][vV]', convert_schwab_pos_file, 'bsv'),
-            'trn': Conversion('*Transactions*.[cC][sS][vV]', convert_schwab_trn_file, 'bsv'),
+            'pos': Conversion('*pos.CSV', convert_schwab_pos_file, 'bsv'),
+            'trn': Conversion('*trn.CSV', convert_schwab_trn_file, 'bsv'),
         },
         'fidelity': {
             'hist': Conversion('AccountHistoryFor*.csv', convert_fidelity_hist_file, 'bak'),
